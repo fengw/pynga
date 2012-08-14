@@ -3,7 +3,6 @@
 BA 08 NGA model
 """
 from utils import *
-
 class BA08_nga:
     """ 
     Class of NGA model of Boore and Atkinson 2008
@@ -12,7 +11,6 @@ class BA08_nga:
 	"""
 	Model initialization
 	"""
-
 	# 0. Given parameters (period independent parameters)
 	self.a1 = 0.03     # in gravity (g)
 	self.a2 = 0.09     # in gravity (g)
