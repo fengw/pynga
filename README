@@ -1,0 +1,29 @@
+PYTHON PACKAGE: pynga
+DESCRIPTION: The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
+
+COMPONENTS
+    4 NGA models, Spudich and Chiou 2008 directivity model
+    NGA dataset manipulation
+    NGA dataset 
+    utilities to compute input parameters for NGA models
+
+INSTALLATION
+    1. Pre-Install:
+	Python with numpy, pyproj, xlrd, xlwt installed
+	or install EPD (which contains almost every module you need)
+
+    2. ADD to PYTHONPATH 
+        Assuming you download the package in local computer at ${HOME}/local/pynga
+
+    vi ./.bashrc (assuming you use bash)
+
+       first, set up your PYTHONHOME (where you installed your python)
+       second, set up the PYTHONPATH, usually, it equals to 
+	   export PYTHONPATH=${PYTHONHOME}/lib/python{version}/site_packages
+       third, add the package downloaded into the PYTHONPATH by 
+	  export PYTHONPATH=$HOME/local/pynga:$PYTHONPATH
+
+USAGE
+Open python or ipython, type: import pynga
+
+
