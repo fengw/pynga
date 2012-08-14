@@ -421,12 +421,12 @@ def BA08nga_test(T,CoefTerms):
 
 if __name__ == '__main__':
 
-    T = 10.0; NewCoefs = {'c1':-0.09824,'c2':-0.13800}  # use the original one
+    T = 10.0; NewCoefs = {'c1':-0.1,'c2':-0.14}  # use the updated one 
+    T = 10.0; NewCoefs = {'c1':-0.09824,'c2':-0.13800} # use the updated one 
     T = 10.0; NewCoefs = {'c1':-0.1,'c2':-0.1000}  # use the updated one
     T = 10.0; NewCoefs = None     # pure one
 
     print 'BA SA at %s second'%('%3.2f'%T)
-
     CoefTerms={'terms':(1,1,1),'NewCoefs':NewCoefs}
     BAnga = BA08nga_test(T,CoefTerms)
     #BAnga = BA08nga_test(T,CoefTerms)
