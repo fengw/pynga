@@ -7,6 +7,7 @@ DESCRIPTION
 COMPONENTS
     0. combination of all NGA models 
        __init__.py 
+    
     1. 4 NGA models 
        AS08.py, BA08.py, CB08.py, CY08.py 
     
@@ -48,9 +49,7 @@ INSTALLATION
 USAGE
    Open python or ipython, type: import pynga
 
-
 REFERENCES 
-
     James Kaklamanos, David M. Boore, Eric M. Thompson, and Kenneth W. Campbell (2011), 
     Implementation of the Next Generation Attenuation (NGA) Ground-Motion Prediction Equations in Fortran and R. 
 
