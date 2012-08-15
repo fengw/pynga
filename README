@@ -49,4 +49,29 @@ USAGE
 # ==============================================
 # Verification and Application
 # ==============================================
-Coming soon...
+For the verification of pynga, go to ./Verification, and see README for further information 
+For one application of pynga, go to ./FlingStudy, and see README for further information 
+
+
+
+REFERENCES 
+
+James Kaklamanos, David M. Boore, Eric M. Thompson, and Kenneth W. Campbell (2011), 
+Implementation of the Next Generation Attenuation (NGA) Ground-Motion Prediction Equations in Fortran and R. 
+
+Abrahamson, N.A., and Silva, W.J., 2008, Summary of the Abrahamson & Silva NGA ground-motion 
+relations: Earthquake Spectra, vol. 24, no. 1, p. 67–97. 
+
+Atkinson, G.M., and Boore, D.M., 2011, Modifications to existing ground-motion prediction equations 
+in light of new data: Bulletin of the Seismological Society of America, in press. 
+Boore, D.M., and Atkinson, G.M., 2008, Ground-motion prediction equations for the average horizontal 
+component of PGA, PGV, and 5%-damped PSA at spectral periods between 0.01 s and 10.0 s: 
+Earthquake Spectra, vol. 24, no. 1, p. 99–138. 
+
+Campbell, K.W., and Bozorgnia, Y., 2008, NGA ground motion model for the geometric mean 
+horizontal component of PGA, PGV, PGD and 5% damped linear elastic response spectra for periods 
+ranging from 0.01 to 10 s: Earthquake Spectra, vol. 24, no. 1, p. 139–171. 
+
+Chiou, B.S.-J., and Youngs, R.R., 2008a, An NGA model for the average horizontal component of peak 
+ground motion and response spectra: Earthquake Spectra, vol. 24, no. 1, p. 173–215. 
+
