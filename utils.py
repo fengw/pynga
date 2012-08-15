@@ -2,7 +2,7 @@
 """
 Utilities used in NGA classes
 """
-import os
+import os, time
 import numpy as np
 
 
@@ -20,6 +20,25 @@ def logline(x1,x2,y1,y2,x):
 
 def GetKey(key):
     return '%3.2f'%(key)
+
+
+# utility for computing time cost of running
+def HourMinSecToSec(BlockName=None):
+    hour, min, sec = time.localtime()[3:6]
+    sec1 = hour*60*60 + min*60 + sec
+    if  BlockName != None:
+	print '%s'%BlockName
+    return sec1
+
+
+def SecToHourMinSec(sec1,BlockName=None):
+    hour = sec1//3600
+    min = (sec1-hour*3600)//60
+    sec = sec1-hour*3600-min*60
+    if BlockName == None:
+	BlockName = 'the above block'
+    print 'Time cost of %s is %s hr %s min %s sec'%(BlockName,hour,min,sec)
+    return hour,min,sec        
 
 
 # save and load (useful metadata operations

@@ -1,7 +1,8 @@
-
 PYTHON PACKAGE: pynga
 AUTHOR: Feng Wang, Jan, 2012
-DESCRIPTION: The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
+
+DESCRIPTION 
+    The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
 
 COMPONENTS
     0. combination of all NGA models 

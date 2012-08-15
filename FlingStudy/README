@@ -5,6 +5,7 @@ DESCRIPTION
     run by the SCEC Broadband platform group as part of a California seismic hazard evaluation project.
     What pynga can do is to compute ground motion levels using NGA models and compare them with 
     results from broadband simulations. 
+    link: http://scec.usc.edu/scecpedia/Fling_Study 
 
 COMPONENTS
     ./inputs   # informations used in broadband simulations, such as source info and site info 
@@ -21,4 +22,4 @@ USAGE
           where 3.0 is the period at which you want to plot PSA 
 
 Note: you can also compute PGA,PGV (just slight modification in ComputePSA section of FlingNGA.py) 
-
+      ./outputs and ./plots will be created when you use FlingNGA.py 

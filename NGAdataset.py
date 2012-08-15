@@ -407,7 +407,7 @@ if __name__ == '__main__':
     if opt == 'GetSubset':
 	
 	# Read the original NGA flatfile
-	file = './data/NGA_Flatfile.xls'
+	file = './NGAdata/NGA_Flatfile.xls'
 	nga_flats, nga_IMs = ReadFlatFileNGA(file)    # for all nga_flats
 
         # =======================================
@@ -415,11 +415,11 @@ if __name__ == '__main__':
 	if rules_type == 'file':
 	    
 	    # read record id you want to remove from file
-            RecordID_save = list(np.loadtxt( './data/RecordID_save.txt', dtype='i4' ))
+            RecordID_save = list(np.loadtxt( './NGAdata/RecordID_save.txt', dtype='i4' ))
 	    nga_flats0, nga_IMs0 = SubsetExtractNGA0(nga_flats, nga_IMs, RecordID_save)
 	    
 	    # write into xls file for test for further usage
-	    subfile = './data/FlatFile_Subset_%s.xls'%rules_type
+	    subfile = './NGAdata/FlatFile_Subset_%s.xls'%rules_type
 
 	else:
 	    # sepecify the rule of selection by user
@@ -447,7 +447,7 @@ if __name__ == '__main__':
 	    
 	    if 1:
 		# Aftershock selection
-		lines = open( './data/event_class_AS' ).readlines()
+		lines = open( './NGAdata/event_class_AS' ).readlines()
 		AS_event_ID = []   # get all eq that are not mainshock and use rule to remove
 		for il in range( 1, len(lines) ):
 		    spl = lines[il].strip().split(' ')
@@ -458,7 +458,7 @@ if __name__ == '__main__':
 		rules = {'EQID': [('==',AS_event_ID),]}
 		nga_flats0, nga_IMs0 = SubsetExtractNGA(nga_flats0, nga_IMs0, rules )
 
-	    subfile = './data/FlatFile_Subset_%s.xls'%rules_type
+	    subfile = './NGAdata/FlatFile_Subset_%s.xls'%rules_type
 	
 	# write into xls file for test for further usage
 	WriteSubsetNGA(nga_flats0, nga_IMs0, subfile )
