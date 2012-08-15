@@ -1,0 +1,24 @@
+Application of pynga to FlingStudy
+
+DESCRIPTION
+    The Fling study is a set of broadband platform simulations defined by NGA researchers and 
+    run by the SCEC Broadband platform group as part of a California seismic hazard evaluation project.
+    What pynga can do is to compute ground motion levels using NGA models and compare them with 
+    results from broadband simulations. 
+
+COMPONENTS
+    ./inputs   # informations used in broadband simulations, such as source info and site info 
+    ./FlingNGA.py     # main function to perform the computation of ground motion intensity and visualization 
+    ./FlingUtils.py   # local utilities used by FlingNGA.py for plots and other
+USAGE
+    ./FlingNGA.py {SourceID} {RuptureID} {Option}
+    
+    Where SourceID should be same as what in ./inputs/Scenario* (140,141,142)
+          RuptureID can be found in ./inputs/Scenario*/SrcDesc1/v* (00,01,02, etc.)
+          Option could be: ComputeDist, PlotDist, ComputePSA, PlotPSA
+          when plotPSA, use 
+          ./FlingNGA.py 142 00 PlotPSA 3.0 
+          where 3.0 is the period at which you want to plot PSA 
+
+Note: you can also compute PGA,PGV (just slight modification in ComputePSA section of FlingNGA.py) 
+

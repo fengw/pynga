@@ -1,0 +1,18 @@
+# Master ID: 1
+# Realization Number: 16 (initial seed for randomization: 5940643)
+# Date: Tue May 08 00:44:42 PDT 2012
+# 
+# Data fields are TAB-separated
+# 
+# Column  1: run number
+# Column  2: magnitude
+# Column  3: dip
+# Column  4: rake
+# Column  5: depth to top of rupture
+# Column  6: name
+# Column  7: fault length
+# Column  8: fault width
+# Column  9: hypocenter location along strike (0=middle of fault)
+# Column 10: hypocenter location down dip (0=top edge of fault)
+#
+001	7.00	45	90	0	m7.00_d45_r90_z0	44.00	23.00	-14.06	13.35
