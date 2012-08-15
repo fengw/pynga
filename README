@@ -1,11 +1,29 @@
+
 PYTHON PACKAGE: pynga
+AUTHOR: Feng Wang, Jan, 2012
 DESCRIPTION: The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
 
 COMPONENTS
-    4 NGA models, Spudich and Chiou 2008 directivity model
-    NGA dataset manipulation
-    NGA dataset 
-    utilities to compute input parameters for NGA models
+    0. combination of all NGA models 
+       __init__.py 
+    1. 4 NGA models 
+       AS08.py, BA08.py, CB08.py, CY08.py 
+    
+    2. Spudich and Chiou 2008 directivity model (under-construction)
+       SC08.py 
+    
+    3. NGA dataset (xls format) manipulation
+       NGAdataset.py 
+    
+    4. NGA dataset 
+       ./NGAdata/NGA_Flatfile.xls 
+    
+    5. Verification with OpenSHA, Matlab, and R version of NGA models (median and standard deviation)
+       ./Verification
+  
+    6. Utilities to compute input parameters needed for NGA models and FlingStudy
+       ./FlingStudy
+
 
 INSTALLATION
     1. Pre-Install:
@@ -24,6 +42,10 @@ INSTALLATION
 	  export PYTHONPATH=$HOME/local/pynga:$PYTHONPATH
 
 USAGE
-Open python or ipython, type: import pynga
+   Open python or ipython, type: import pynga
 
 
+# ==============================================
+# Verification and Application
+# ==============================================
+Coming soon...
