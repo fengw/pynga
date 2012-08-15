@@ -25,22 +25,25 @@ COMPONENTS
     6. Utilities to compute input parameters needed for NGA models and FlingStudy
        ./FlingStudy
 
+DOWNLOAD 
+    Since the package is version-controlled on GitHub, so you can clone the package using "git clone" 
+	git clone git@github.com:fengw/pynga.git 
+
 
 INSTALLATION
     1. Pre-Install:
 	Python with numpy, pyproj, xlrd, xlwt installed
 	or install EPD (which contains almost every module you need)
 
-    2. ADD to PYTHONPATH 
+    2. ADD to PYTHONPATH (on MacOS and Linux)
         Assuming you download the package in local computer at ${HOME}/local/pynga
 
-    vi ./.bashrc (assuming you use bash)
-
-       first, set up your PYTHONHOME (where you installed your python)
-       second, set up the PYTHONPATH, usually, it equals to 
-	   export PYTHONPATH=${PYTHONHOME}/lib/python{version}/site_packages
-       third, add the package downloaded into the PYTHONPATH by 
-	  export PYTHONPATH=$HOME/local/pynga:$PYTHONPATH
+	vi ./.bashrc (assuming you use bash)
+	   first, set up your PYTHONHOME (where you installed your python)
+	   second, set up the PYTHONPATH, usually, it equals to 
+	       export PYTHONPATH=${PYTHONHOME}/lib/python{version}/site_packages
+	   third, add the package downloaded into the PYTHONPATH by 
+	      export PYTHONPATH=$HOME/local/pynga:$PYTHONPATH
 
 USAGE
    Open python or ipython, type: import pynga
