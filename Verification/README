@@ -1,0 +1,32 @@
+Verification of pynga with OpenSHA's NGA model (2008 model)
+
+DESCRIPTION
+    As an object-oriented framework, OpenSHA can accomodate arbitrarily complex (e.g., physics based) 
+    earthquake rupture forecasts (ERFs), ground-motion models, and engineering-response models, 
+    which narrows the gap between cutting-edge geophysics and state-of-the-art hazard and risk evaluations.
+    In OpenSHA, there are built-in NGA relations and we could use selected sources to test pynga's ability 
+    to compute NGA values (both mean and total standard deviation or sigmaT).
+    In this verfication experiment, I use TeraShake source sid = 79, and Mw = 7.35 to compute NGA value at 
+    sites which have different Vs30, Z1.0, Z2.5, Rjb, Rrup, and Rx to verify pynga. 
+
+COMPONENTS
+    ./OpenSHA_NGA08        # OpenSHA compute NGA08 values (four NGA models) for the given source at different sites
+    ./SrcInfo              # there is one metadata which has all fault information for the give source (for example: 
+                             rake, dip, W, and other related ones)
+    ./VerificationNGAs.py   # main function to compute NGAs and visually compare results from pynga and OpenSHA 
+            ./VerificationNGA.py {opt} [period]
+            opt could be: Compute, Plot 
+		(1)when opt == Plot, it's ./VerificationNGAs.py Plot 3.0 and show comparison at specified period  
+		(2)when opt == Compute, pynga computes ground motion intensity values (PSA) at 
+		    periods = [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+			       0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0 ]
+  
+USAGE
+    ./VerificationNGAs.py {opt} [period]
+    opt could be: Compute, Plot 
+	(1)when opt == Plot, it's ./VerificationNGAs.py Plot 3.0 and show comparison at specified period  
+	(2)when opt == Compute, pynga computes ground motion intensity values (PSA) at 
+	    periods = [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+		       0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0 ]
+
+Note: ./outputs and ./plots will be generated when you use VerificationNGAs.py
