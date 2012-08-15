@@ -16,13 +16,13 @@ COMPONENTS
     3. NGA dataset (xls format) manipulation
        NGAdataset.py 
     
-    4. NGA dataset 
+    4. NGA dataset (flatfiles)
        ./NGAdata/NGA_Flatfile.xls 
     
-    5. Verification with OpenSHA, Matlab, and R version of NGA models (median and standard deviation)
+    5. Verification with OpenSHA (Java) version of NGA models (median and standard deviation)
        ./Verification
   
-    6. Utilities to compute input parameters needed for NGA models and FlingStudy
+    6. One application of pynga in Fling Study 
        ./FlingStudy
 
 DOWNLOAD 
@@ -47,14 +47,6 @@ INSTALLATION
 
 USAGE
    Open python or ipython, type: import pynga
-
-
-# ==============================================
-# Verification and Application
-# ==============================================
-For the verification of pynga, go to ./Verification, and see README for further information 
-For one application of pynga, go to ./FlingStudy, and see README for further information 
-
 
 
 REFERENCES 
