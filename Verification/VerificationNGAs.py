@@ -15,8 +15,10 @@ wrk = os.path.realpath( os.getcwd() )
 OpenSHA_pth = wrk + '/OpenSHA_NGA08/'
 
 output_pth = wrk + '/outputs' 
-plot_pth = wrk + '/plots' 
-for f in [ output_pth, plot_pth, ]: 
+plot_pth0 = wrk + '/plots' 
+plot_pth = plot_pth0 + '/VerificationNGAs' 
+
+for f in [ output_pth, plot_pth0, plot_pth, ]: 
     if not os.path.exists( f ):
 	os.mkdir( f )
 metafile = output_pth + '/NGAcptVer.py'

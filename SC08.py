@@ -99,9 +99,8 @@ class SC08_model:
 	    self.Coefs[Tkey]['b'] = bs[i]
 	self.CoefKeys = self.Coefs[self.Coefs.keys()[0]].keys()
 
-	
 	self.fD=[]    # directivity correction   ( remember to plus the average residual a0 term)
-
+	self.IDP = []
 
     def __call__(self,M,Rrup,ctildepr,s,h,Rfn,Rfp,T,NewCoefs=None):
 
@@ -113,7 +112,7 @@ class SC08_model:
 	self.h = h      # downdip depth of hypocenter
 	self.Rfn = Rfn      # radiation pattern (fault-normal)
 	self.Rfp = Rfp      # fault parallel radiation pattern
-
+        
 	if T in self.periods:
 	    self.T = T
 	else:
@@ -126,6 +125,8 @@ class SC08_model:
 	    self.ctildepr = 1./ (1./self.ratio-tmp)    # definition of the c'
 	else:
 	    self.ctildepr = ctildepr
+
+        self.IDP.append( self.calc_IDP() )
 
 	# modify the coefficients
 	if NewCoefs != None:
@@ -141,7 +142,7 @@ class SC08_model:
 	    # For other periods will be 0.0 for fD
 	    self.fD.append( 0.0 )
 
-    
+
     def calc_IDP(self):
 
 	C = ( min(self.ctildepr, self.ccut) - self.ratio ) / (self.ccut - self.ratio)
@@ -169,8 +170,4 @@ class SC08_model:
 	fD = fr*fM*(a+b*self.calc_IDP() )   # attention to the unit here
 	
 	return np.exp(fD + a0)
-
-
-
-
 
