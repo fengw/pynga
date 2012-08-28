@@ -1,4 +1,4 @@
-Verification of pynga with OpenSHA's NGA model (2008 model)
+Verification of pynga with OpenSHA's NGA model (2008 model) and Matlab version of SC08 directivity model
 
 DESCRIPTION
     As an object-oriented framework, OpenSHA can accomodate arbitrarily complex (e.g., physics based) 
@@ -8,7 +8,7 @@ DESCRIPTION
     to compute NGA values (both mean and total standard deviation or sigmaT).
     In this verfication experiment, I use TeraShake source sid = 79, and Mw = 7.35 to compute NGA value at 
     sites which have different Vs30, Z1.0, Z2.5, Rjb, Rrup, and Rx to verify pynga. 
-
+    
 COMPONENTS
     ./OpenSHA_NGA08        # OpenSHA compute NGA08 values (four NGA models) for the given source at different sites
     ./SrcInfo              # there is one metadata which has all fault information for the give source (for example: 
