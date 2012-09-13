@@ -110,8 +110,8 @@ if opt == 'ComputeDist':
     inverse = True  # from xy to ll
     ProjDict = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}
 
-    VisualDict={'SiteLoc':(rlon,rlat),'savetype':'pdf','plotpth':plotpth20} 
     VisualDict=None
+    VisualDict={'SiteLoc':(rlon,rlat),'savetype':'pdf','plotpth':plotpth20} 
 
     if VisualDict != None:
 	from FlingUtils import *
@@ -228,7 +228,7 @@ if opt == 'PlotPSA':
     ax1.set_xlabel( r'$R_{JB}$ (km)' )
     ax1.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
     ax2.set_xlabel( r'$R_{x}$ (km)' )
-    ax2.set_ylabel( r'5%-damped PSA (ln)' )
+    ax1.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
     ax3.set_xlabel( r'$R_{rup}$ (km)' )
     ax3.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
 

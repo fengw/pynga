@@ -307,12 +307,20 @@ class BA08_nga:
 	return (c1+c2*(self.M-self.Mref))*np.log(R/self.Rref)+c3*(R-self.Rref)
 
 
-    def soil_function(self):
+    def soil_function(self, Vs30=None, Tother=None):
 	"""
 	Site Amplification Function
 	"""
-        # linear term
-	Ti = GetKey(self.T )
+
+	if Vs30 != None: 
+	    self.Vs30 = Vs30 
+	    
+	if Tother != None: 
+	    Ti = GetKey( Tother ) 
+	else: 
+	    Ti = GetKey(self.T )
+	
+	# linear term
 	blin = self.Coefs[Ti]['blin']
 	flin = blin * np.log(self.Vs30/self.Vref)
 
@@ -320,12 +328,9 @@ class BA08_nga:
 	# non-linear term
 	# =================
 	# 1. compute pga4nl, which is defined as the media PGA when Vs30=Vref=760 m/s
-	Tother = -1.0    # compute PGA
-	Ti = GetKey(Tother)
-	pga4nl = np.exp( self.moment_function(Tother) + self.distance_function(Tother) )
+	Tpga = -1.0    # compute PGA
+	pga4nl = np.exp( self.moment_function(Tpga) + self.distance_function(Tpga) )
 		        
-	Ti = GetKey( self.T )
-	
 	b1 = self.Coefs[Ti]['b1']
 	b2 = self.Coefs[Ti]['b2']
 

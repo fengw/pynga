@@ -279,7 +279,7 @@ class CY08_nga:
 	if Z10 == None:
 	    self.Z10 = calc_Z1(self.Vs30,'CY')   # in meter
 	else:
-	    self.Z10 = Z10
+	    self.Z10 = Z10   # Z10 should be in meter
 
 	self.AS = AS       # Aftershock flag (0 or 1)  (depends on the earthquake itself)
 	self.VsFlag = VsFlag # 0: inferred Vs30; 1: measured Vs30
@@ -369,16 +369,23 @@ class CY08_nga:
 	return term7 + term8
      
     # make differences due the floating numbers computed using cosh
-    def basin_function(self):
-	Ti = GetKey( self.T )
+    def basin_function(self,Z10=None,Tother=None):
 	
+	if Tother != None:
+	    Ti = GetKey( Tother )
+	else:
+	    Ti = GetKey( self.T )
+	
+	if Z10 != None: 
+	    self.Z10 = Z10 
+
 	f5 = self.Coefs[Ti]['f5']
 	f6 = self.Coefs[Ti]['f6']
 	f7 = self.Coefs[Ti]['f7']
 	f8 = self.Coefs[Ti]['f8']
 
 	term9  = f5*(1-1./np.cosh(f6*max(0,self.Z10-f7)))  
-	term10 = f8/np.cosh(0.15*max(0,self.Z10-15))     # R use cosh(0.15*min(max(0, (Z1.0 - 15)), 300)) instead
+	term10 = f8/np.cosh(0.15*max(0,self.Z10-15))        # R use cosh(0.15*min(max(0, (Z1.0 - 15)), 300)) instead
 	#term10 = self.f8[Ti]/np.cosh(0.15*min(max(0, (selfZ10 - 15)), 300))    # what R use 
 	return  term9 + term10
 

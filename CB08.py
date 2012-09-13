@@ -327,7 +327,8 @@ class CB08_nga():
 	
 	return c9*f_hngr*f_hngm*f_hngz*f_hngd
 
-    def basin_function(self,Tother=None):
+
+    def basin_function(self,Tother=None,Z25=None):
 	"""
 	Basin-effect term
 	"""
@@ -336,6 +337,9 @@ class CB08_nga():
 	else:
 	    Ti = GetKey( self.T )
 	
+	if Z25 != None: 
+	    self.Z25 = Z25 
+
 	c11 = self.Coefs[Ti]['c11']
 	c12 = self.Coefs[Ti]['c12']
 	k3  = self.Coefs[Ti]['k3']
@@ -354,7 +358,7 @@ class CB08_nga():
 			 self.distance_function(Tother)+
 			 self.fault_function(Tother)+
 			 self.hw_function(Tother)+
-			 self.basin_function(Tother)+
+			 self.basin_function(Tother=Tother)+
 	                 self.site_function(A1100=0,Vs30=1100.,Tother = Tother) )
         return A1100
 
@@ -411,7 +415,7 @@ class CB08_nga():
 			  terms[1]*self.fault_function(Tother)+
 			  terms[2]*self.hw_function(Tother)+
 			  terms[5]*self.site_function(Tother=Tother)+
-			  terms[4]*self.basin_function(Tother))
+			  terms[4]*self.basin_function(Tother=Tother))
 
 	    if IM < IM1: 
 		# This is for SA (not for PGA, since PGA is computed above)

@@ -35,7 +35,6 @@ NGAs = {'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
 
 # source info (one fault)
 sid = 79
-
 if opt == 'Prepare':
     # you need have OpenSHA install on the local machine to do so 
     filen = OpenSHA_pth + '/nga_inputs'
@@ -47,6 +46,7 @@ if opt == 'Prepare':
     os.chdir(OpenSHA_pth)
     os.system( 'nga_comparison_calc nga_inputs' )
     os.chdir(wrk)
+
 
 if opt == 'Compute': 
     # read source info from metafile which has all information about the fault
@@ -108,9 +108,16 @@ if opt == 'Compute':
 	    ) 
     save( metafile, meta, header='#NGA comparison\n' )
 
+
 if opt == 'Plot':
-    Ti = float(sys.argv[2])
-    Tkey = '%.3f'%Ti 
+    
+    # all plots are in logarithmic scale
+    Ti = sys.argv[2] 
+    
+    try: 
+	Ti = float(sys.argv[2])
+    except: 
+	pass
 
     pfmt = 'png' 
     try: 
@@ -124,20 +131,85 @@ if opt == 'Plot':
     xlab, ylab = 'Python', 'OpenSHA'
     nameS = 'Mean','sigmaT'
     clr = 'r', 'b'
-    for i in xrange( len( nameS ) ):
-	fig = plt.figure(i+1) 
-	for inga, nga in enumerate( NGAmodels ):
-	    ax = fig.add_subplot( 2,2, inga+1) 
-	    ngaP1 = ngaP[nga][Tkey][i] 
-	    ngaO1 = ngaO[nga][Tkey][i] 
-	    ax.plot( ngaP1, ngaO1, clr[i]+'.' )
-	    if inga == 0: 
-		ax.set_title( nga+' '+nameS[i] )
-	    else: 
-		ax.set_title( nga )
-            if inga in [0,2]: 
-		ax.set_ylabel( 'OpenSHA' )
-	    if inga in [2,3]:
-		ax.set_xlabel( 'Python' )
-	    plt.axis('equal')
-	fig.savefig( plot_pth + '/NGAs_PSA%s_%s.%s'%(Tkey,nameS[i], pfmt), format=pfmt )
+    clrs = ['r','g','b','k']
+
+    if Ti == 'All': 
+	for T in periods: 
+	    Tkey = '%.3f'%T 
+	    for i in xrange( len( nameS ) ):
+		fig = plt.figure(i+1) 
+		fig.clf()
+		for inga, nga in enumerate( NGAmodels ):
+		    ax = fig.add_subplot( 2,2, inga+1) 
+		    ngaP1 = ngaP[nga][Tkey][i] 
+		    ngaO1 = ngaO[nga][Tkey][i] 
+		    ax.plot( ngaP1, ngaO1, clr[i]+'.' )
+		    if inga == 0: 
+			ax.set_title( nga+' '+nameS[i] )
+		    else: 
+			ax.set_title( nga )
+		    if inga in [0,2]: 
+			ax.set_ylabel( 'OpenSHA' )
+		    if inga in [2,3]:
+			ax.set_xlabel( 'Python' )
+		    plt.axis('equal')
+		fig.savefig( plot_pth + '/NGAs_PSA%s_%s.%s'%(Tkey,nameS[i], pfmt), format=pfmt )
+    
+    elif Ti == 'Corr': 
+	# compute 
+        fig = plt.figure(1,(12,8))
+	for inga, nga in enumerate( NGAmodels ): 
+	    ax = fig.add_subplot(2,2,inga+1)
+	    lines = []
+	    rhos0 = []
+	    for it in xrange(len(periods)):
+		Tkey = '%.3f'%periods[it]
+		ngaP1 = np.array( ngaP[nga][Tkey][0] )
+		ngaO1 = np.array( ngaO[nga][Tkey][0] )
+		rho = np.corrcoef( ngaP1, ngaO1 )[0,1]
+		rhos0.append( rho )
+	    line = ax.semilogx( periods, rhos0, clr[0]+'o' )
+	    lines.append( line )
+	    ax.set_title( nga )
+
+	    rhos1 = []
+	    for it in xrange(len(periods)):
+		Tkey = '%.3f'%periods[it]
+		ngaP1 = np.array( ngaP[nga][Tkey][1] )
+		ngaO1 = np.array( ngaO[nga][Tkey][1] )
+		rho = np.corrcoef( ngaP1, ngaO1 )[0,1]
+		rhos1.append( rho )
+	    line = ax.semilogx( periods, rhos1, clr[1]+'*' )
+	    lines.append( line )
+	    ax.set_ylim([0.99,1.01])
+	    ax.set_xlim([-0.1,10.1])
+	    if inga == 0:
+		ax.set_ylabel( 'correlation' )
+		lg = ax.legend(lines,nameS)
+		lg.draw_frame(False)
+	    elif inga == 3: 
+		ax.set_xlabel( 'periods' )
+	fig.savefig( plot_pth + '/NGAs_PSA_Corr_periods.%s'%('eps'), format='eps' )
+	#plt.show()
+
+    else: 
+	# plot just one period
+	Tkey = '%.3f'%Ti
+	for i in xrange( len( nameS ) ):
+	    fig = plt.figure(i+1) 
+	    for inga, nga in enumerate( NGAmodels ):
+		ax = fig.add_subplot( 2,2, inga+1) 
+		ngaP1 = ngaP[nga][Tkey][i] 
+		ngaO1 = ngaO[nga][Tkey][i] 
+		ax.plot( ngaP1, ngaO1, clr[i]+'.' )
+		if inga == 0: 
+		    ax.set_title( nga+' '+nameS[i] )
+		else: 
+		    ax.set_title( nga )
+		if inga in [0,2]: 
+		    ax.set_ylabel( 'OpenSHA' )
+		if inga in [2,3]:
+		    ax.set_xlabel( 'Python' )
+		plt.axis('equal')
+	    fig.savefig( plot_pth + '/NGAs_PSA%s_%s.%s'%(Tkey,nameS[i], pfmt), format=pfmt )
+
