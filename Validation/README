@@ -1,0 +1,19 @@
+In ./plots 
+
+For each NGA model, the validation is performed. 
+for example, ./plots/BA08/ 
+
+1. RMS
+   for each file set computed by original modelers (V1) and pynga (V2) 
+   Y-axis: err = sqrt( 1/N * sum( ((V1-V2)/V1)**2 ) ) where N is the total number of data points to validate. 
+   and what are show is err * 100 (%) and the black dash lines are +- 0.02% for reference, and x-axis: Period 
+   green dot: PGA
+   blue dot: PGV
+   red dot: SA at various periods
+
+2. Scatter 
+   for each file set computed by original modelers (V1) and pynga (V2) 
+   Y-axis: err = V2-V1 (for each period) 
+   X-axis: Rjb  
+   each subplot corresponds to each periods (-1: PGA, -2: PGV)
+   
