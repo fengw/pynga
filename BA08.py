@@ -140,10 +140,10 @@ class BA08_nga:
 	    self.Coefs[Tkey]['b2']   = b2s[i]
 	self.CoefKeys = self.Coefs[self.Coefs.keys()[0]].keys()
 
-        self.fault = ['unspecified','strike-slip','normal','reverse','U','NS','SS','RS']
+        self.fault = ['unspecified','strike-slip','normal','reverse','U','NM','SS','RV']
 
 
-    def __call__( self,M,Rjb,Vs30,T,rake=None,Mech=3,AB11=None,CoefTerms={'terms':(1,1,1),'NewCoefs':None}):
+    def __call__( self,M,Rjb,Vs30,T,rake=None,Mech=3, Ftype=None, AB11=None,CoefTerms={'terms':(1,1,1),'NewCoefs':None}):
 	"""
 	Compute IM for single period
 	required inputs:
@@ -155,6 +155,7 @@ class BA08_nga:
 	     1: normal
 	     2: reverse
 	     else: unspecified (U=1) (Default)
+	Ftype = 'U', or 'SS', or 'RV', or 'NM'
 	AB11: consider the recent correction to the median value
 	"""
 	# ==================
@@ -186,26 +187,33 @@ class BA08_nga:
 
 	self.rake = rake
 	self.Mech = Mech
-	self.AB11 = AB11
 	
-	if Mech != None and rake != None:
-	    # giveng Mech and rake at the same time, use Mech, not rake
-	    rake = None
-
-	if rake != None and Mech == None:
-	    # Get ftype from rake
-	    self.rake = rake
-	    self.ftype()
-	
-	if rake == None and Mech != None:
-	    self.U = 1*(Mech>2)
-	    self.SS = 1*(Mech==0)
-	    self.NS = 1*(Mech==1)
-	    self.RS = 1*(Mech==2)
-
-	if rake == None and Mech == None:
-	    print 'either rake or (U,SS,NS,RS) should be provided'
+	if rake == None and Mech == None and Ftype == None:
+	    print 'either rake or (U,SS,NM,RV) should be provided'
 	    raise ValueError
+	else: 
+	    if Ftype != None: 
+		self.U = 1*(Ftype == 'U')
+		self.SS = 1*(Ftype == 'SS')
+		self.NM = 1*(Ftype == 'NM')
+		self.RV = 1*(Ftype == 'RV')
+            else: 
+		if Mech != None and rake != None:
+		    # giveng Mech and rake at the same time, use Mech, not rake
+		    rake = None
+
+		if rake != None and Mech == None:
+		    # Get ftype from rake
+		    self.rake = rake
+		    self.ftype()
+		
+		if rake == None and Mech != None:
+		    self.U = 1*(Mech>2)
+		    self.SS = 1*(Mech==0)
+		    self.NM = 1*(Mech==1)
+		    self.RV = 1*(Mech==2)
+
+	self.AB11 = AB11
 
 	# modify the coefficients
 	if NewCoefs != None:
@@ -251,15 +259,15 @@ class BA08_nga:
 	    else:
 		self.SS = 0
 	    
-	    if FT == 'normal' or FT == 'NS':
-		self.NS = 1
+	    if FT == 'normal' or FT == 'NM':
+		self.NM = 1
 	    else:
-		self.NS = 0
+		self.NM = 0
 
-	    if FT == 'reverse' or FT == 'RS':
-		self.RS = 1
+	    if FT == 'reverse' or FT == 'RV':
+		self.RV = 1
 	    else:
-		self.RS = 0
+		self.RV = 0
         return FT   
 
 
@@ -282,10 +290,10 @@ class BA08_nga:
         Mh = self.Coefs[Ti]['Mh']
 
 	if self.M <= Mh:
-	    return e1*self.U + e2*self.SS + e3*self.NS + e4*self.RS + \
+	    return e1*self.U + e2*self.SS + e3*self.NM + e4*self.RV + \
 		   e5*(self.M-Mh) + e6*(self.M-Mh)**2.
 	else:
-	    return e1*self.U + e2*self.SS + e3*self.NS + e4*self.RS + \
+	    return e1*self.U + e2*self.SS + e3*self.NM + e4*self.RV + \
 		   e7*(self.M-Mh)
 
     def distance_function(self,Tother=None):
@@ -329,7 +337,7 @@ class BA08_nga:
 	# =================
 	# 1. compute pga4nl, which is defined as the media PGA when Vs30=Vref=760 m/s
 	Tpga = -1.0    # compute PGA
-	pga4nl = np.exp( self.moment_function(Tpga) + self.distance_function(Tpga) )
+	pga4nl = np.exp( self.moment_function(Tother=Tpga) + self.distance_function(Tother=Tpga) )
 		        
 	b1 = self.Coefs[Ti]['b1']
 	b2 = self.Coefs[Ti]['b2']
@@ -387,10 +395,10 @@ class BA08_nga:
 		FT = 'U'
 	    if self.SS ==1:
 		FT = 'SS'
-	    if self.NS == 1:
-		FT = 'NS'
-	    if self.RS == 1:
-		FT = 'RS'
+	    if self.NM == 1:
+		FT = 'NM'
+	    if self.RV == 1:
+		FT = 'RV'
 	else:
 	    FT = self.ftype()
 	
@@ -416,8 +424,9 @@ def BA08nga_test(T,CoefTerms):
     Mw = 7.
     AB11 = None
     rake=180.
-    
-    kwds = {'rake':rake,'Mech':None,'AB11':AB11,'CoefTerms':CoefTerms}
+    rake = None
+    Ftype='SS'
+    kwds = {'rake':rake,'Mech':None,'Ftype':Ftype,'AB11':AB11,'CoefTerms':CoefTerms}
     BAnga = BA08_nga()    # BA08nga instance
     values = mapfunc( BAnga, Mw, Rjb, Vs30, T, **kwds )
 

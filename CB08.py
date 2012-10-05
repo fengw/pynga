@@ -125,10 +125,10 @@ class CB08_nga():
 	
     
     # Call to get the SA value
-    def __call__(self,M,Rjb,Vs30,T,rake, \
+    def __call__(self,M,Rjb,Vs30,T, rake, Ftype=None, \
 	    Rrup=None,dip=None,Ztor=None,Z25=None, \
 	    W=None,Zhypo=None,azimuth=None,Fhw=0,\
-	    Z10=None,Z15=None,  \
+	    Z10=None,Z15=None, Arb=0, \
 	    CoefTerms={'terms':(1,1,1,1,1,1),'NewCoefs':None}):
 	"""
 	Call the class to compute median ground-motion intensity
@@ -139,7 +139,8 @@ class CB08_nga():
 	self.Rjb = float(Rjb)   # Joyner-Boore distance (km)
 	self.Vs30 = float(Vs30)  # time-averaged shear wave velocity over 30m subsurface depth (m/s)
 	self.T = T   # select period (sec)
-	self.rake = rake  # rake angle
+	
+	self.rake = rake    # rake could be None then you have to give the W and dip
 
         terms = CoefTerms['terms']
 	NewCoefs = CoefTerms['NewCoefs']
@@ -160,25 +161,48 @@ class CB08_nga():
 	if self.Vs30 == None or self.Vs30 < 0: 
 	    print 'Vs30 must be a positive number'
 	    raise ValueError
-	if rake == None or rake < -180 or rake > 180.:
-	    print 'rake angle should be within [-180,180]'
-	    raise ValueError
-	self.Frv, self.Fnm = rake2ftype_CB( self.rake )
+	
+	# Determine the Fault-related parameters (if necessary)
+	if Ftype != None:
+	    self.Fnm = 1*(Ftype == 'NM')
+	    self.Frv = 1*(Ftype == 'RV')
+	else: 
+	    if rake == None or rake < -180 or rake > 180.:
+		print 'rake angle should be within [-180,180]'
+		raise ValueError
+	    else: 
+		self.Frv, self.Fnm = rake2ftype_CB( self.rake )
        
 	if W == None:
-	    W = calc_W(self.M,self.rake)
-	
+	    if self.rake == None: 
+		print 'you should give either the fault width W or the rake angle'
+		raise ValueError
+	    else:
+		W = calc_W(self.M,self.rake)
+	else: 
+	    self.W = W 
+
 	if dip == None:
-	    self.dip = calc_dip( self.rake )
+	    if self.rake == None: 
+		print 'you should give either the fault dip angle or the rake angle'
+		raise ValueError
+	    else:
+		self.dip = calc_dip( self.rake )
 	else:
 	    self.dip = dip
+	
 	if Ztor == None:
 	    if Zhypo == None:
-		Zhypo = calc_Zhypo( self.M, self.rake )
+		if self.rake == None: 
+		    print 'you should give either the Ztor or the rake angle'
+		    raise ValueError
+		else:
+		    Zhypo = calc_Zhypo( self.M, self.rake )
 	    self.Ztor = calc_Ztor( W, self.dip, Zhypo )
         else:
 	    self.Ztor = Ztor
 
+        # Determine Site-Source related parameters (if necessary)
 	if Rrup == None:
 	    if azimuth == None:
 		if Fhw != None:
@@ -196,6 +220,7 @@ class CB08_nga():
 	else:
 	    self.Rrup = Rrup
 
+        # Determine Site-Specific parameters
         if Z25 == None:
 	    if Z15 != None:
 		Z25 = 636. + 1.549*Z15
@@ -208,19 +233,21 @@ class CB08_nga():
 	else: 
 	    self.Z25 = Z25  # input Z25 should be in km
 
-        # update coeficient
+        # update coeficient (use updated coefficients)
 	if NewCoefs != None:
 	    NewCoefKeys = NewCoefs.keys()
 	    Tkey = GetKey(self.T)
 	    for key in NewCoefKeys:
 		self.Coefs[Tkey][key] = NewCoefs[key]
 	
+
         # Compute IM and Standard deviation
 	IM = self.compute_im(terms=terms)
 	sigma, tau, sigmaT, sigmaArb = self.sd_calc()
-	
-	return IM, sigmaT, tau, sigma
-
+	if Arb == 0:
+	    return IM, sigmaT, tau, sigma 
+	else: 
+	    return IM, sigmaArb, tau, sigma
 
     # ============================
     # Function used in this class
@@ -486,9 +513,14 @@ def CB08nga_test(T, CoefTerms):
     Ztor= 0.64274240 
     dip = 79.39554 
     
+    Ftype = 'SS'
+    rake = None 
+    Arb = 0
+    W = 5.0
+
     # How to use it
     CBnga = CB08_nga()
-    kwds = {'Z25':Z25,'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'CoefTerms':CoefTerms}
+    kwds = {'Ftype':Ftype,'Z25':Z25,'Rrup':Rrup,'W':W,'Ztor':Ztor,'dip':dip,'Arb':Arb,'CoefTerms':CoefTerms}
     values = mapfunc( CBnga, M, Rjb, Vs30, T, rake,**kwds )
 
     for i in xrange( len(values) ):

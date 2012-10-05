@@ -15,10 +15,10 @@ from utils import *
 # NGA Models
 # =======================
 # Compute NGAs (You can use your coefficients and term flags)
-def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,NGAs=None, \
+def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,Ftype=None, NGAs=None, \
 	  Rrup=None,Rx=None,dip=None,W=None,Ztor=None,Zhypo=None,\
 	  Z25=None,Z15=None,Z10=None,azimuth=None, \
-	  Fhw=None,Fnm=None,Frs=None,Fas=0,AB11=None,AS09=None,VsFlag=0):
+	  Fhw=None,Fnm=None,Frv=None,Fas=0,AB11=None,ArbCB=0,AS09=None,VsFlag=0):
     """
     Compute NGA model
     Flags: 
@@ -49,7 +49,7 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,NGAs=None, \
     if model_name == 'BA':
 	
 	BAnga = BA08.BA08_nga()
-	kwds = {'rake':rake,'Mech':Mech,'AB11':AB11, 'CoefTerms':dict1[model_name]}   # OpenSHA doesn't have this
+	kwds = {'rake':rake,'Mech':Mech,'Ftype':Ftype,'AB11':AB11, 'CoefTerms':dict1[model_name]}   # OpenSHA doesn't have this
 	
 	periods = np.array(BAnga.periods)
 	for ip in xrange( len(periods) ):
@@ -89,7 +89,7 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,NGAs=None, \
     if model_name == 'CB':
 	
 	CBnga = CB08.CB08_nga()
-	kwds = {'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Z15':Z15,'CoefTerms':dict1[model_name]}
+	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Z15':Z15,'Arb':ArbCB,'CoefTerms':dict1[model_name]}
 	
 	periods = np.array(CBnga.periods)
 	for ip in xrange( len(periods) ):
@@ -128,7 +128,7 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,NGAs=None, \
     if model_name == 'CY':
 	
 	CYnga = CY08.CY08_nga()
-	kwds = {'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'AS':Fas,'VsFlag':VsFlag,'CoefTerms':dict1[model_name]}
+	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'AS':Fas,'VsFlag':VsFlag,'CoefTerms':dict1[model_name]}
 	
 	periods = np.array(CYnga.periods)
 	for ip in xrange( len(periods) ):
@@ -167,7 +167,7 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,NGAs=None, \
 
     if model_name == 'AS':                                                                                                                
 	ASnga = AS08.AS08_nga()
-	kwds = {'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag, 'CoefTerms':dict1[model_name]}
+	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag, 'CoefTerms':dict1[model_name]}
 	
 	periods = np.array(ASnga.periods)
 	for ip in xrange( len(periods) ):

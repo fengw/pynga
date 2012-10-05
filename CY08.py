@@ -198,7 +198,7 @@ class CY08_nga:
 
 
     # call the function 
-    def __call__(self,M,Rjb,Vs30,T,rake,
+    def __call__(self,M,Rjb,Vs30,T,rake, Ftype = None, \
 	         Rrup=None,Rx=None,dip=None,Ztor=None,Z10=None,\
 	         W=None,Zhypo=None,azimuth=None,Fhw=None,\
 		 AS=0,VsFlag=1,\
@@ -221,36 +221,62 @@ class CY08_nga:
 	NewCoefs = CoefTerms['NewCoefs']
 
         # Obtain optional parameters
-	self.Frv, self.Fnm = rake2ftype_CY( self.rake )
+	if Ftype != None:
+	    self.Fnm = 1*(Ftype == 'NM')
+	    self.Frv = 1*(Ftype == 'RV')
+	else: 
+	    if rake == None or rake < -180 or rake > 180.:
+		print 'rake angle should be within [-180,180]'
+		raise ValueError
+	    else: 
+		self.Frv, self.Fnm = rake2ftype_CY( self.rake )
 
 	if W == None:
-	    W = calc_W(self.M,self.rake)
-
+	    if self.rake == None: 
+		print 'you should give either the fault width W or the rake angle'
+		raise ValueError
+	    else:
+		W = calc_W(self.M,self.rake)
+	else: 
+	    self.W = W 
+	
 	if dip == None:
-	    self.dip = calc_dip( self.rake )
+	    if self.rake == None: 
+		print 'you should give either the fault dip angle or the rake angle'
+		raise ValueError
+	    else:
+		self.dip = calc_dip( self.rake )
 	else:
 	    self.dip = dip
+	
 	if Ztor == None:
 	    if Zhypo == None:
-		Zhypo = calc_Zhypo( self.M, self.rake )
+		if self.rake == None: 
+		    print 'you should give either the Ztor or the rake angle'
+		    raise ValueError
+		else:
+		    Zhypo = calc_Zhypo( self.M, self.rake )
 	    self.Ztor = calc_Ztor( W, self.dip, Zhypo )
-	else:
-	    self.Ztor = Ztor  
+        else:
+	    self.Ztor = Ztor
+	
+	if Fhw == None:
+	    if azimuth == None and Rx == None:
+		print 'either one of azimuth angle, Rx and Fhw has to be specified'
+		raise ValueError
 
-	if azimuth == None and Rx == None and Fhw == None:
-	    print 'either one of azimuth angle, Rx and Fhw has to be specified'
-	    raise ValueError
-	else:
 	    if azimuth != None:
 		if 0 <= azimuth <= 180. and dip != 90.:
 		    Fhw = 1
 		else:
 		    Fhw = 0
+	    
 	    elif Rx != None:
 		if Rx >=0 and dip != 90.:
 		    Fhw = 1
 		else:
 		    Fhw = 0
+	    
 	    if dip == 90:
 		Fhw = 0
 	
@@ -259,12 +285,12 @@ class CY08_nga:
 		azimuth = 50
 	    else:
 		azimuth = -50.
+	
 	if self.Rjb == 0:
 	    azimuth = 90.
 	    Fhw = 1
+	self.Fhw = Fhw 
 
-	self.Fhw = Fhw
-        
 	# Compute Rx and Rrup
 	if Rx == None: 
 	    self.Rx = calc_Rx( self.Rjb, self.Ztor, W, self.dip, azimuth, Rrup )
@@ -348,7 +374,7 @@ class CY08_nga:
 	c9a = self.Coefs[Ti]['c9a']
 
 	d = self.dip*np.pi/180.
-	term6 = c9*self.Fhw*np.tanh(self.Rx*np.cos(d)*(np.cos(d))/c9a)*(1-np.sqrt(self.Rjb**2+self.Ztor**2)/(self.Rrup+0.001))
+	term6 = c9*self.Fhw*np.tanh(self.Rx*np.cos(d)*np.cos(d)/c9a)*(1-np.sqrt(self.Rjb**2+self.Ztor**2)/(self.Rrup+0.001))
         return term6    
 
     def lnYref(self):
@@ -368,6 +394,7 @@ class CY08_nga:
 	term8 = f2*( np.exp(f3*(min(self.Vs30,1130)-360)) - np.exp(f3*(1130-360)) )*np.log((np.exp(lnY_ref)+f4)/f4)
 	return term7 + term8
      
+
     # make differences due the floating numbers computed using cosh
     def basin_function(self,Z10=None,Tother=None):
 	

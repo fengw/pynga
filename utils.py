@@ -5,11 +5,31 @@ Utilities used in NGA classes
 import os, time
 import numpy as np
 
-
+# ===================
+# General Functions
+# ===================
 def cpt_sqrt( a,b ):
     a = np.array( a )
     b = np.array( b )
     return np.sqrt( a**2 + b**2 )
+
+
+def RMScalc( V1,V2, Ratio=True ): 
+    N = len(V1) 
+    if len(V2) != N: 
+	print 'length of array2 should be the same as array1'
+	raise ValueError
+    else:
+	if 0 in V2: 
+	    print 'elements in array2 should not be zeros'
+	    raise ValueError
+	if Ratio:
+	    Error = (V1-V2)/V2
+	else: 
+	    Error = (V1-V2)
+	RMS = np.sqrt( sum(Error**2) / N )
+    return RMS 
+
 
 def logline(x1,x2,y1,y2,x):
     # linear interpolation
@@ -18,18 +38,17 @@ def logline(x1,x2,y1,y2,x):
     y = k*x+C
     return y
 
+
 def GetKey(key):
     return '%3.2f'%(key)
 
 
-# utility for computing time cost of running
 def HourMinSecToSec(BlockName=None):
     hour, min, sec = time.localtime()[3:6]
     sec1 = hour*60*60 + min*60 + sec
     if  BlockName != None:
 	print '%s'%BlockName
     return sec1
-
 
 def SecToHourMinSec(sec1,BlockName=None):
     hour = sec1//3600
@@ -268,7 +287,60 @@ def mapfunc(func,*args,**kwds):
     return value   # return is a list even taking single number for each input (attention)
 
 
+# geometrical projection (general)
+def projection(x,y,**kwds):
+    """ 
+    Projection of lon/lat to UTM or reverse direction
+    input:
+    x,y ( lon/lat or x/y )
+    kwds: zone, origin, rot, inverse
+    
+    output:
+    x,y ( x/y or lon/lat )
+    """
+
+    import pyproj
+
+    zone = kwds['zone']
+    origin = kwds['origin']
+    rot = kwds['rot']
+    inverse = kwds['inverse']
+
+    if origin == None:
+	return
+
+    # geometrical origin
+    x0 = origin[0]; y0 = origin[1]
+    
+    rot = rot*np.pi/180.
+    c,s = np.cos(rot),np.sin(rot)
+    
+    x = np.array(x,'f')
+    y = np.array(y,'f')
+    
+    # you can use other projections (modify here)
+    proj = pyproj.Proj(proj='utm',zone=zone,ellps='WGS84')
+    
+    if inverse:
+	x0,y0 = proj(x0,y0,inverse=False)
+	x,y = c*x-s*y, s*x+c*y
+	x,y = x+x0,y+y0
+	x,y = proj(x,y,inverse=True)
+    
+    else:
+
+	x0,y0 = proj(x0,y0,inverse=False)
+	x,y = proj(x,y,inverse=False)
+	x,y = x-x0,y-y0
+	x,y = x*c+y*s, -s*x+c*y
+
+    return x,y
+
+
+
+# =========================================================================================
 # NGA database related 
+# =========================================================================================
 def RakeBin(rakes):
     # rakes in degree, list
        
@@ -308,6 +380,7 @@ def RakeBin(rakes):
     
     return group, groupnames
 
+
 def Vs30Bin(Vs30s):
     # Vs30s in m/s, list
 
@@ -337,10 +410,14 @@ def Vs30Bin(Vs30s):
 	    group['E'].append( Vs30 )
     return group, groupnames
 
+
 # =========================================================================================
-# Functions to compute exploratory variables
+# Functions to compute exploratory variables used in GMPEs
 # =========================================================================================
-# 1. Source related 
+
+# ==============
+# Fault type
+# ==============
 def rake2ftype_BA(rake):
     if rake == None:
 	ftype = 'U'
@@ -350,7 +427,7 @@ def rake2ftype_BA(rake):
 	elif 30. < rake < 150.:
 	    ftype = 'RS' # reverse
 	elif -150. <= rake <= -30.:
-	    ftype = 'NS' # normal
+	    ftype = 'NM' # normal
 	else:
 	    print 'Wrong rake angle!'
 	    raise ValueError
@@ -381,6 +458,9 @@ def rake2ftype_AS(rake):
     return Frv, Fnm
 
 
+# ===================
+# Fault geometry
+# ===================
 def calc_dip( rake ):
     """
     Empirical determination of dip angle from the faulting style
@@ -401,6 +481,7 @@ def calc_dip( rake ):
 	dip = 40
     return dip 
 
+
 def calc_Zhypo(M,rake):
     """
     Compute Zhypo from empirical relations 
@@ -419,6 +500,7 @@ def calc_Zhypo(M,rake):
     else:
 	Zhypo = 11.24 - 0.2 * M
     return Zhypo
+
 
 def calc_W(M,rake):
     """
@@ -444,6 +526,7 @@ def calc_W(M,rake):
 
     return W
 
+
 def calc_Ztor(W,dip,Zhypo):
     """
     Compute Ztor if not specified by input
@@ -462,7 +545,9 @@ def calc_Ztor(W,dip,Zhypo):
     return Ztor
 
 
-# 2. Source-Site related (distances)
+# ======================================
+# Fault-Site distances (Rjb, Rx, Rrup)
+# ======================================
 def calc_Rx(Rjb, Ztor, W, dip, azimuth, Rrup=None):
     """
     Compute distance parameter Rx from other inputs
@@ -560,63 +645,10 @@ def calc_Rrup( Rx, Ztor, W, dip, azimuth, Rjb=None ):
     Rrup = np.sqrt( Rrup1**2 + Ry**2 )
     return Rrup
 
-# Give fault geometry (fault plane coordinates) and site locations
-# compute Rjb, azimuth, and then Rrup
-# from those, computing Rx by the function defined above
-
-# using fault plane as the xy coordinate is the key 
-def projection(x,y,**kwds):
-    """ 
-    Projection of lon/lat to UTM or reverse direction
-    input:
-    x,y ( lon/lat or x/y )
-    kwds: zone, origin, rot, inverse
-    
-    output:
-    x,y ( x/y or lon/lat )
-    """
-
-    import pyproj
-
-    zone = kwds['zone']
-    origin = kwds['origin']
-    rot = kwds['rot']
-    inverse = kwds['inverse']
-
-    if origin == None:
-	return
-
-    # geometrical origin
-    x0 = origin[0]; y0 = origin[1]
-    
-    rot = rot*np.pi/180.
-    c,s = np.cos(rot),np.sin(rot)
-    
-    x = np.array(x,'f')
-    y = np.array(y,'f')
-    
-    # you can use other projections (modify here)
-    proj = pyproj.Proj(proj='utm',zone=zone,ellps='WGS84')
-    
-    if inverse:
-	x0,y0 = proj(x0,y0,inverse=False)
-	x,y = c*x-s*y, s*x+c*y
-	x,y = x+x0,y+y0
-	x,y = proj(x,y,inverse=True)
-    
-    else:
-
-	x0,y0 = proj(x0,y0,inverse=False)
-	x,y = proj(x,y,inverse=False)
-	x,y = x-x0,y-y0
-	x,y = x*c+y*s, -s*x+c*y
-
-    return x,y
-
 
 def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
     """
-    Compute Rjb, Rrup, Rx given fault geometry and site location
+    Compute Rjb, Rrup, Rx given fault geometry and site location (in lon/lat)
     For one site
     FaultGeo: 3*NfaultPoints (slon,slat,sdep)
     SiteGeo: (rlon,rlat)
@@ -746,7 +778,10 @@ def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
     return OutputDict
 
 
-# 3. Site related ( site condition ) Given Vs30 (inferred or measured)
+
+# ==========================
+# Site-Specific Parameters
+# ==========================
 def calc_Z1(Vs30,NGAmodel):
     """
     Compute Z1.0 parameter for AS and CY model if not specified
@@ -796,8 +831,9 @@ def calc_Z25( Vs30=None, Z1=None, Z15=None ):
     return Z25 / 1000.   # in km
 
 
-# 4. inter- and intra- event residuals calculation using standard deivation and 
-# residuals between the original observations and NGA predicted median values
+# ====================
+# Applications (other)
+# ====================
 def GetIntraInterResiduals(residualT, EQID, sigmaT, tau, sigma, AS=None):
     """
     Compute Normalized Total, Inter- and Intra residuals

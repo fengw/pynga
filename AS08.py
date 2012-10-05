@@ -136,7 +136,7 @@ class AS08_nga:
 	self.CoefKeys = self.Coefs[self.Coefs.keys()[0]].keys()
 
 
-    def __call__(self,M,Rjb,Vs30,T,rake,\
+    def __call__(self,M,Rjb,Vs30,T,rake, Ftype=None, \
 	         Rrup=None,Rx=None,dip=None,Ztor=None,Z10=None,\
 		 W=None,Zhypo=None,azimuth=None,Fhw=None, \
 		 Fas=0,VsFlag=1, AS09=None,  \
@@ -157,52 +157,78 @@ class AS08_nga:
 	terms = CoefTerms['terms']
 	NewCoefs = CoefTerms['NewCoefs']
 
-        self.Frv, self.Fnm = rake2ftype_AS( self.rake )
-	
-	if W == None:
-	    self.W = calc_W(self.M,self.rake)
-	else:
-	    self.W = W
+        # Obtain optional parameters
+	if Ftype != None:
+	    self.Fnm = 1*(Ftype == 'NM')
+	    self.Frv = 1*(Ftype == 'RV')
+	else: 
+	    if rake == None or rake < -180 or rake > 180.:
+		print 'rake angle should be within [-180,180]'
+		raise ValueError
+	    else: 
+		self.Frv, self.Fnm = rake2ftype_AS( self.rake )
 
+	if W == None:
+	    if self.rake == None: 
+		print 'you should give either the fault width W or the rake angle'
+		raise ValueError
+	    else:
+		W = calc_W(self.M,self.rake)
+	else: 
+	    self.W = W 
+	
 	if dip == None:
-	    self.dip = calc_dip( self.rake )
+	    if self.rake == None: 
+		print 'you should give either the fault dip angle or the rake angle'
+		raise ValueError
+	    else:
+		self.dip = calc_dip( self.rake )
 	else:
 	    self.dip = dip
 	
 	if Ztor == None:
 	    if Zhypo == None:
-		Zhypo = calc_Zhypo( self.M, self.rake )
-	    self.Ztor = calc_Ztor( self.W, self.dip, Zhypo )
-	else:
+		if self.rake == None: 
+		    print 'you should give either the Ztor or the rake angle'
+		    raise ValueError
+		else:
+		    Zhypo = calc_Zhypo( self.M, self.rake )
+	    self.Ztor = calc_Ztor( W, self.dip, Zhypo )
+        else:
 	    self.Ztor = Ztor
 
-	if azimuth == None and Rx == None and Fhw == None:
-	    print 'either one of azimuth angle, Rx and Fhw has to be specified'
-	    raise ValueError
-	else:
+
+	if Fhw == None:
+	    if azimuth == None and Rx == None:
+		print 'either one of azimuth angle, Rx and Fhw has to be specified'
+		raise ValueError
+
 	    if azimuth != None:
 		if 0 <= azimuth <= 180. and dip != 90.:
 		    Fhw = 1
 		else:
 		    Fhw = 0
+	    
 	    elif Rx != None:
 		if Rx >=0 and dip != 90.:
 		    Fhw = 1
 		else:
 		    Fhw = 0
+	    
 	    if dip == 90:
 		Fhw = 0
-
+	
 	if azimuth == None:
 	    if Fhw == 1:
 		azimuth = 50
 	    else:
 		azimuth = -50.
-	if self.Rjb == 0:                                          
-	    azimuth = 90.                                                             
-	    Fhw = 1                                                                    
 	
-	self.Fhw = Fhw
+	if self.Rjb == 0:
+	    azimuth = 90.
+	    Fhw = 1
+	
+	self.Fhw = Fhw 
 	
 	# Compute Rrup and Rx
 	if Rx == None:                                                                
@@ -378,18 +404,20 @@ class AS08_nga:
     # compute Vs30* for soil and site effect functions
     def CalcVs30Star( self, Vs30, T ):
 
-	if T <= 0.5:
-	    V1 = 1500.    # m/s
-	elif 0.5 < T <= 1.0:
-	    V1 = np.exp(8.0-0.795*np.log(T/0.21))
-	elif 1 < T < 2:
-	    V1 = np.exp(6.76-0.297*np.log(T))
-	elif T >= 2:
-	    V1 = 700
-	elif T == -2.0:
+	# compute V1 (used in soil-depth model)
+	if T == -2.0:
 	    V1 = 862     # For PGV (m/s)
-	else:
-	    pass
+	else: 
+	    if T <= 0.5:
+		V1 = 1500.    # m/s
+	    elif 0.5 < T <= 1.0:
+		V1 = np.exp(8.0-0.795*np.log(T/0.21))
+	    elif 1 < T < 2:
+		V1 = np.exp(6.76-0.297*np.log(T))
+	    elif T >= 2:
+		V1 = 700
+	    else:
+		pass
 	
 	# calculate Vs30*
 	if Vs30 < V1:
@@ -462,15 +490,16 @@ class AS08_nga:
 	Z11 = np.exp(Z11)
 
         # compute e2
-        if T == -2: 
+	if T == -2.0: 
+	    # for PGV
 	    e2 = -0.25 * np.log(Vs30/1000.)*np.log(1./0.35) 
-	
-	if T < 0.35 or Vs30 > 1000.:
-	    e2 = 0.0
-	elif 0.35 <= T <= 2:
-	    e2 = -0.25 * np.log(Vs30/1000.)*np.log(T/0.35)
-	else:
-	    e2 = -0.25 * np.log(Vs30/1000.)*np.log(2./0.35) 
+	else: 
+	    if T < 0.35 or Vs30 > 1000.:
+		e2 = 0.0
+	    elif 0.35 <= T <= 2.0:
+		e2 = -0.25 * np.log(Vs30/1000.)*np.log(T/0.35)
+	    else:
+		e2 = -0.25 * np.log(Vs30/1000.)*np.log(2./0.35) 
 	
 	# compute a21
 	tmp1 = (a10+b*self.n)*np.log(Vs30_1/min(V1,1000.))+e2*np.log((Z10+self.c2)/(Z11+self.c2))
@@ -478,7 +507,7 @@ class AS08_nga:
 	    a21 = 0.0
 	else:
 	    if tmp1 < 0:    # what in R
-	    #elif tmp1 < 0 and Vs30 < 1000.:
+	    #elif tmp1 < 0 and Vs30 < 1000.: # what in OpenSHA
 		a21 = -(a10+b*self.n)*np.log(Vs30_1/min(V1,1000.)) / np.log((Z10+self.c2)/(Z11+self.c2))
 	    else:
 		a21 = e2
@@ -505,9 +534,9 @@ class AS08_nga:
 	Z10Rock = calc_Z1( Vs30Rock, 'AS' )
 	Tother = -1.0
 	PGA1100 = self.base_model(Tother)+self.flt_function(Tother)+\
-		  self.site_model(PGA1100Rock,Vs30Rock,Tother)+\
+		  self.site_model(PGA1100Rock,Vs30=Vs30Rock,Tother=Tother)+\
 		  self.Fhw*self.hw_function(Tother)+self.ztor_function(Tother)+self.ld_function(Tother)  + \
-		  self.soil_function(Z10Rock,Vs30Rock,Tother)
+		  self.soil_function(Z10=Z10Rock,Vs30=Vs30Rock,Tother=Tother)
 	return np.exp( PGA1100 )
 
 
@@ -528,7 +557,7 @@ class AS08_nga:
 		   terms[4] * self.site_model(PGA1100) + \
 		   terms[5] * self.soil_function()
 	else:
-	    
+
 	    Vs30Rock = 1100
 	    Z10Rock =  calc_Z1(Vs30Rock,'AS')
 	    
@@ -586,6 +615,7 @@ class AS08_nga:
 	    return -b*PGA1100/(PGA1100+self.c)  + \
 		    b*PGA1100/(PGA1100+self.c*(self.Vs30/Vlin)**self.n)    # as reported
      
+
     def calc_sigma0_tau0(self,Tother=None):
 	if Tother == None:
 	    indT = (np.array(self.periods)==self.T).nonzero()[0]
