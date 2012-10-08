@@ -5,6 +5,9 @@ Utilities used in NGA classes
 import os, time
 import numpy as np
 
+# optional for test plots 
+import matplotlib.pyplot as plt 
+
 # ===================
 # General Functions
 # ===================
@@ -789,8 +792,8 @@ R = 6371.   # Earth radius (km)
 tol = 1e-10 
 def LonLatToAngleDistance( loc1, loc2, \
 	CalcRadius=True, \
-	CalcDist=False, Fast=False, \
-        CalcAzimuth=False, Azimuth0to2PI=False ): 
+	CalcDist=True, Fast=True, \
+        CalcAzimuth=True, Azimuth0to2PI=False ): 
     """ 
     Convert lon/lat to radius (earth center) and/or azimuth and great circle Distances
     between points on the spherical surface
@@ -950,9 +953,8 @@ def distToLine(loc1, loc2, loc3, Fast=False):
 	# sin(A)/sin(a) = sin(B)/sin(b) = sin(C)/sin(c) 
 	# A, B, and C: angle between surface circle 
 	# a, b, and c: center angle of surface circle (great)
-	a13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=True)['Radius']
-	az13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=False,CalcAzimuth=True)['Azimuth1to2']
-	az12 = LonLatToAngleDistance(loc1,loc2,CalcRadius=False,CalcAzimuth=True)['Azimuth1to2']
+	a13,hD,vD,az13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
+	a12,hD,vD,az12 = LonLatToAngleDistance(loc1,loc2,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
 	Daz13az12 = az13-az12 
 	xtd = np.arcsin( np.sin(a13)*np.sin(Daz13az12) ) 
 	if abs(xtd) < tol: 
@@ -987,9 +989,8 @@ def distToLineSeg( loc1,loc2,loc3, Fast=False ):
 
     else:
 	# use cos(c) = cos(a)cos(b) + sin(a)sin(b)cos(C) to get
-	a13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=True)['Radius']
-	az13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=False,CalcAzimuth=True)['Azimuth1to2']
-	az12 = LonLatToAngleDistance(loc1,loc2,CalcRadius=False,CalcAzimuth=True)['Azimuth1to2']
+	a13, hD13, vD13, az13 = LonLatToAngleDistance(loc1,loc3,Fast=Fast)
+	a12, hD12, vD12, az12 = LonLatToAngleDistance(loc1,loc2,Fast=Fast)
 	Daz13az12 = az13-az12 
 
         # cross-track distance (in radius)
@@ -997,15 +998,17 @@ def distToLineSeg( loc1,loc2,loc3, Fast=False ):
 
 	# along-track distance (in km )
 	atd = np.arccos( np.cos(a13)/np.cos(xtd) ) * R 
-	hD13 = LonLatToAngleDistance(loc1,loc3,CalcDist=True)['horzDistance']
-	hD12 = LonLatToAngleDistance(loc1,loc2,CalcDist=True)['horzDistance']
-	hD23 = LonLatToAngleDistance(loc2,loc3,CalcDist=True)['horzDistance']
+	a23, hD23, vD23, az23 = LonLatToAngleDistance(loc2,loc3,CalcRadius=False,CalcDist=True,Fast=Fast,CalcAzimuth=False)
 
 	# check if beyond p3 (should be p2?) (different from the original Rx definition?)
-	if atd > hD12: return hD23 
+	if atd > hD12: 
+	    print 'Beyond p2'
+	    return hD23 
 	
 	# check if beyond p1 
-	if np.cos(Daz13az12)<0: return hD13 
+	if np.cos(Daz13az12)<0:
+	    print 'Beyond p1'
+	    return hD13 
 
         # projection of the point is within the two points
 	if abs(xtd) < tol: 
@@ -1053,8 +1056,12 @@ def EndLocation(loc1, vector):
 
     # compute the location information for the end point loc2 
     lat2 = np.arcsin( sinLat1*cosD + cosLat1*sinD*np.cos(az) ) 
-    lon2 = lon1 + np.arctan2(np.sin(az)*sinD*cosLat1, cosD-sinLat1*np.sin(lat2)) 
+    dlon = np.arctan2(np.sin(az)*sinD*cosLat1, cosD-sinLat1*np.sin(lat2)) 
+    lon2 = lon1 + dlon
     dep2 = dep1 + DV
+
+    lat2 = lat2*180./np.pi 
+    lon2 = lon2*180./np.pi
     
     return [lon2,lat2,dep2] 
 
@@ -1112,7 +1119,6 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
 	They all have the following shape (site-based): 
     """
     FaultGeo = np.array( FaultGeo ) 
-    
     SiteGeo = np.array( SiteGeo ) 
     loc1 = SiteGeo
 
@@ -1124,7 +1130,7 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
     
     surf = FaultGeo.reshape((Nrow*Ncol,Nelm))
     for loc2 in surf:
-	alpha, az, hD, vD = LonLatToAngleDistance(loc1, loc2, CalcRadius=True, CalcDist=True, Fast=Fast) 
+	alpha, hD, vD, az = LonLatToAngleDistance(loc1, loc2, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=False) 
 	if hD <= minRjb: 
 	    minRjb = hD
 	totalDist = np.sqrt( hD**2 + vD**2 )
@@ -1139,7 +1145,7 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
 	for irow in xrange( Nrow-1 ): 
 	    loc1 = FaultGeo[irow,0] 
 	    loc2 = FaultGeo[irow+1,0] 
-	    alpha, hD, vD = LonLatToAngleDistance(loc1, loc2, CalcRadius=True, CalcDist=True, Fast=Fast) 
+	    alpha, hD, vD, az = LonLatToAngleDistance(loc1, loc2, CalcRadius=True, CalcDist=True, Fast=Fast) 
 	    DDtmp += DDtmp + hD 
 	DownDipGridSpace = DDtmp / (Nrow-1)
 	AStmp = 0
@@ -1184,13 +1190,14 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
     ps = FaultTrace[0]
     pe = FaultTrace[-1] 
     
-    Radius, Azimuth1to2, hD, vD = LonLatToAngleDistance(ps, pe, CalcRadius=True, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
+    Radius, hD, vD, Azimuth1to2 = LonLatToAngleDistance(ps, pe, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
     vector = [Azimuth1to2, hD, vD]
     
     # define the extended fault traces (to project faults surface projections on!)
     vector[1] = 1000  # km 
     vector[2] = 0
-
+    
+    # problem here !!!
     Loc1 = EndLocation( ps, vector ) 
     vector[0] = Azimuth1to2 + np.pi   # flip over trace dir 
     Loc2 = EndLocation( pe, vector ) 
@@ -1215,6 +1222,24 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
     
     verts.append( Loc4 ) 
     verts.append( Loc3 ) 
+    
+    if 0:
+    # Test extended fault trace and fault surface projection (plot) 
+	verts1 = np.array( verts ) 
+	fig = plt.figure(10) 
+	ax = fig.add_subplot( 111 ) 
+	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
+	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
+	raw_input() 
+    if 0: 
+	print 'Surface projection verts: '
+	print verts
+	print 'Fault trace segments: '
+	print segs 
+	print 'Fault geometry: '
+	print FaultGeo
+	print 'Site location:' 
+	print SiteGeo
     
     # check site is inside the polygon 
     check = CheckPointInPolygon( SiteGeo[:2], np.array(verts)[:,:2] )
