@@ -11,6 +11,20 @@ import AS08
 import SC08
 from utils import *
 
+
+# Period list (available for each NGA models) 
+TsDict = {
+	'BA': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],   # last two: PGA, PGV, 
+	'CB': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+	'CY': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+	'AS': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+	}
+
+
 # =======================
 # NGA Models
 # =======================
@@ -217,11 +231,9 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,Ftype=None, NGAs=None
     return NGAmedian, np.exp( NGAsigmaT ), np.exp( NGAtau ), np.exp( NGAsigma )      # all in g, include the standard deviation
 
 
-# ====================
-# self_application
-# ====================
-if __name__ == '__main__':
-    
+def BA08Test(): 
+    # to reproduce BA model (shown in Earthquake Spectra 2008) 
+
     import matplotlib.pyplot as plt
 
     NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
@@ -249,5 +261,46 @@ if __name__ == '__main__':
     ax.set_xlabel( r'$R_{JB}$ (km)' )
     ax.set_ylabel( r'5%-damped PSA (cm/s)' )
     plt.show()
+
+
+def NGAtest(nga): 
+    # simple test comparing with file: ./Validation/NGAmodelsTestFiles/nga_Sa_v19a.xls
+    M = 6.93 
+    Ztor = 3 
+    Ftype = 'RV'
+    W = 3.85 
+    dip = 70 
+    Rrup = Rjb = Rx = 30 
+    Fhw = 0 
+    Vs30 = 760 
+    Z10 = 0.024 * 1000   # in meter 
+    Z25 = 2.974    # in km 
+    VsFlag = 0 
+
+    periods = TsDict[nga] 
+    NT = len(periods) 
+    Medians = []; SigmaTs = []
+    for ip in xrange( NT ): 
+	Ti = periods[ip] 
+	median, std, tau, sigma = NGA08( nga, M, Rjb, Vs30, Ti, Ftype=Ftype, W=W,Ztor=Ztor,dip=dip,Rrup=Rrup,Rx=Rx,Fhw=Fhw,Z10=Z10,Z25=Z25,VsFlag=VsFlag )
+        Medians.append( median ) 
+	SigmaTs.append( np.log(std) ) 
+    output = np.c_[ np.array( periods),  np.array( Medians ), np.array( SigmaTs ) ] 
+    pth = './tmp'
+    if not os.path.exists( pth ): 
+	os.mkdir(pth) 
+    np.savetxt( pth + '/SimpleTest%s.txt'%nga, output ) 
+
+    print output 
+
+# ====================
+# self_application
+# ====================
+if __name__ == '__main__':
+
+    import sys 
+
+    #BA08Test()
+    NGAtest(sys.argv[1])
 
 

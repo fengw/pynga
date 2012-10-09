@@ -813,7 +813,8 @@ def LonLatToAngleDistance( loc1, loc2, \
     http://www.movable-type.co.uk/scripts/latlong.html
     """
     loc1 = np.array( loc1 ) 
-    lac2 = np.array( loc2 ) 
+    loc2 = np.array( loc2 ) 
+    
     lon1, lat1 = loc1[:2] * np.pi/180. 
     lon2, lat2 = loc2[:2] * np.pi/180.
     
@@ -1139,46 +1140,44 @@ def getDistances(SiteGeo, FaultGeo, Fast = True):
     
     Rrup = minRrup 
 
+    # check site is within the surface projection of the fault 
+    verts = []
+    irow = 0
+    for icol in xrange( Ncol ): 
+	verts.append( FaultGeo[irow,icol][:2].tolist() )
+    icol = 0
+    for irow in xrange( Nrow ): 
+	verts.append( FaultGeo[irow,icol][:2].tolist() )
+    irow = Nrow-1
+    for icol in xrange( Ncol ): 
+	verts.append( FaultGeo[irow,icol][:2].tolist() )
+    icol = Ncol-1 
+    for irow in xrange( Nrow ): 
+	verts.append( FaultGeo[irow,icol][:2].tolist() )
+    check = CheckPointInPolygon( SiteGeo[:2], verts )
+    if check: 
+	Rjb = 0.0
+    else: 
+	Rjb = minRjb 
+    
     if 0: 
-	# OpenSHA
 	DDtmp = 0
 	for irow in xrange( Nrow-1 ): 
 	    loc1 = FaultGeo[irow,0] 
 	    loc2 = FaultGeo[irow+1,0] 
-	    alpha, hD, vD, az = LonLatToAngleDistance(loc1, loc2, CalcRadius=True, CalcDist=True, Fast=Fast) 
+	    alpha, hD, vD, az = LonLatToAngleDistance(loc1, loc2, CalcRadius=False, CalcDist=True, Fast=Fast) 
 	    DDtmp += DDtmp + hD 
 	DownDipGridSpace = DDtmp / (Nrow-1)
 	AStmp = 0
 	for icol in xrange( Ncol-1 ): 
-	    loc1 = FaultGeo[icol,0] 
-	    loc2 = FaultGeo[icol+1,0] 
-	    alpha, hD, vD = LonLatToAngleDistance(loc1, loc2, CalcRadius=True, CalcDist=True, Fast=True) 
+	    loc1 = FaultGeo[0,icol] 
+	    loc2 = FaultGeo[0,icol+1] 
+	    alpha, hD, vD, az = LonLatToAngleDistance(loc1, loc2, CalcRadius=False, CalcDist=True, Fast=True) 
 	    AStmp += AStmp + hD 
 	AlongStrikeGridSpace = AStmp / (Ncol-1) 
 	AveGridSpace = (DownDipGridSpace+AlongStrikeGridSpace)/2.0
-
 	if (minRjb < AveGridSpace): 
 	    Rjb = 0.0
-	else: 
-	    Rjb = minRjb 
-    else: 
-	# check site is within the surface projection of the fault 
-	verts = []
-	irow = 0
-	for icol in xrange( Ncol ): 
-	    verts.append( FaultGeo[irow,icol][:2].tolist() )
-	icol = 0
-	for irow in xrange( Nrow ): 
-	    verts.append( FaultGeo[irow,icol][:2].tolist() )
-	irow = Nrow-1
-	for icol in xrange( Ncol ): 
-	    verts.append( FaultGeo[irow,icol][:2].tolist() )
-	icol = Ncol-1 
-	for irow in xrange( Nrow ): 
-	    verts.append( FaultGeo[irow,icol][:2].tolist() )
-	check = CheckPointInPolygon( SiteGeo[:2], verts )
-	if check: 
-	    Rjb = 0 
 	else: 
 	    Rjb = minRjb 
 
