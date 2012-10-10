@@ -43,7 +43,7 @@ def logline(x1,x2,y1,y2,x):
 
 
 def GetKey(key):
-    return '%3.2f'%(key)
+    return '%.3f'%(key)
 
 
 def HourMinSecToSec(BlockName=None):

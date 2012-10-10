@@ -263,7 +263,6 @@ class AS08_nga:
 
 	return IM, sigmaT, tau, sigma
 
-
     
     def logline(self,x1,x2,y1,y2,x):
 	# linear interpolation
@@ -289,12 +288,14 @@ class AS08_nga:
 
 	Rtmp = np.sqrt(self.Rrup**2+self.c4**2)
 	if self.M <= self.c1:
-	    return a1+ a4*(self.M-self.c1)+a8*(8.5-self.M)**2+ \
+	    output = a1+ a4*(self.M-self.c1)+a8*(8.5-self.M)**2+ \
 	          (a2+a3*(self.M-self.c1))*np.log(Rtmp)
 	else:
-	    return a1+a5*(self.M-self.c1)+a8*(8.5-self.M)**2+ \
+	    output = a1+a5*(self.M-self.c1)+a8*(8.5-self.M)**2+ \
 	          (a2+a3*(self.M-self.c1))*np.log(Rtmp)
-    
+	return output 
+
+
     def flt_function(self,Tother=None):
 	# fault type and aftershock flag
 	if Tother != None:
@@ -306,14 +307,14 @@ class AS08_nga:
 	a13 = self.Coefs[Ti]['a13']
 	a15 = self.Coefs[Ti]['a15']
 
-	return (a12*self.Frv + a13*self.Fnm + a15*self.Fas) 
-
+        output = (a12*self.Frv + a13*self.Fnm + a15*self.Fas) 
+	return output 
 
     def hw_function(self,Tother=None):
 	# hanging wall function
 	
 	if self.Rx < 0:
-	    return 0.0
+	    output = 0.0
 
 	else:
 
@@ -358,9 +359,8 @@ class AS08_nga:
 		    tape5 = 1-(self.dip-30)/60.  # AS 2009 Eq 5
 		else:
 		    tape5 = 1.0
-
-	    return a14*tape1*tape2*tape3*tape4*tape5	   
-    
+	    output = a14*tape1*tape2*tape3*tape4*tape5	   
+	return output 
 
     def ztor_function(self, Tother=None):
 	# depth to top of rupture model
@@ -373,9 +373,10 @@ class AS08_nga:
 	a16 = self.Coefs[Ti]['a16']
 
 	if self.Ztor<10:
-	    return a16*self.Ztor/10.
+	    output = a16*self.Ztor/10.
 	else:
-	    return a16
+	    output = a16
+	return output
 
 
     def ld_function(self, Tother=None):
@@ -396,9 +397,10 @@ class AS08_nga:
 	    tape6 = 0.5
 	
 	if self.Rrup < 100:
-	    return 0
+	    output = 0.0 
 	else:
-	    return a18*(self.Rrup-100)*tape6
+	    output = a18*(self.Rrup-100)*tape6
+        return output 
 
 
     # compute Vs30* for soil and site effect functions
@@ -424,7 +426,7 @@ class AS08_nga:
 	    Vs30_1 = Vs30
 	else:
 	    Vs30_1 = V1
-	
+
 	return V1, Vs30_1
 
 
@@ -449,11 +451,12 @@ class AS08_nga:
 	V1, Vs30_1 = self.CalcVs30Star(Vs30,T)
 	
 	if Vs30 < Vlin:
-	    return a10*np.log(Vs30_1/Vlin)-\
+	    output = a10*np.log(Vs30_1/Vlin)-\
 		    b*np.log(PGA1100+self.c) + \
 		    b*np.log(PGA1100+self.c*(Vs30_1/Vlin)**self.n)
 	else:
-	    return (a10+b*self.n)*np.log(Vs30_1/Vlin)
+	    output = (a10+b*self.n)*np.log(Vs30_1/Vlin)
+	return output 
 
 
     def soil_function(self,Z10=None,Vs30=None,Tother=None,coefs=None):
@@ -507,22 +510,24 @@ class AS08_nga:
 	    a21 = 0.0
 	else:
 	    if tmp1 < 0:    # what in R
-	    #elif tmp1 < 0 and Vs30 < 1000.: # what in OpenSHA
 		a21 = -(a10+b*self.n)*np.log(Vs30_1/min(V1,1000.)) / np.log((Z10+self.c2)/(Z11+self.c2))
 	    else:
 		a21 = e2
 
 	# compute a22
 	if T < 2:
+	    # For PGV, a22 is computed using T=1.0
 	    a22 = 0.0
 	else:
 	    a22 = 0.0625 * (T-2)
 	
 	term1 = a21*np.log((Z10+self.c2)/(Z11+self.c2))
 	if Z10 >= 200:
-	    return term1 + a22*np.log(Z10/200.)
+	    output = term1 + a22*np.log(Z10/200.)
 	else:
-	    return term1
+	    output = term1
+        return output 
+
 
 
     def PGA1100_calc(self):
@@ -537,7 +542,9 @@ class AS08_nga:
 		  self.site_model(PGA1100Rock,Vs30=Vs30Rock,Tother=Tother)+\
 		  self.Fhw*self.hw_function(Tother)+self.ztor_function(Tother)+self.ld_function(Tother)  + \
 		  self.soil_function(Z10=Z10Rock,Vs30=Vs30Rock,Tother=Tother)
-	return np.exp( PGA1100 )
+	output = np.exp( PGA1100 ) 
+	return output 
+
 
 
     # function to compute the intensity
@@ -548,7 +555,7 @@ class AS08_nga:
         Td = -1.25+0.3*self.M
 	Td = 10**(Td)
 	Td = min(Td,10)
-	
+
 	if self.T <= Td:
 	    LnSa = terms[0] * self.base_model() + \
 		   terms[1] * self.flt_function() + \
@@ -665,25 +672,40 @@ def AS08nga_test(T,CoefTerms):
     """
     Test AS nga model
     """
-    Mw = 7.75
-    Rjb = 9.589290479428028 
-    Vs30 = 354.0,768.,1200.,160. 
-    rake = 180    # for specific rupture
+    if 0:
+	# input list
+	Mw = 7.75
+	Rjb = 9.589290479428028 
+	Vs30 = 354.0,768.,1200.,160. 
+	rake = 180    # for specific rupture
 
-    Rrup = 12.18438518124245 
-    Rx = 10.099037378240684
-    Ztor= 0.64274240
-    dip = 79.39554
-    W = 19.65842096
-    Z10 = 0.0, 300., 500., 1000.
+	Rrup = 12.18438518124245 
+	Rx = 10.099037378240684
+	Ztor= 0.64274240
+	dip = 79.39554
+	W = 19.65842096
+	Z10 = 0.0, 300., 500., 1000.
 
-    Fas = 0
-    VsFlag = 0
-    
+	Fas = 0
+	VsFlag = 0
+    else: 
+	Mw = 6.93 
+	Ztor = 3 
+	Ftype = 'RV'; rake = None
+	W = 3.85 
+	dip = 70 
+	Rrup = Rjb = Rx = 30 
+	Fhw = 0 
+	Vs30 = 760 
+	Z10 = 0.024 * 1000   # in meter 
+	Z25 = 2.974    # in km 
+	VsFlag = 0 
+	Fas = 0
+
+
     ASnga = AS08_nga()
-    
 
-    kwds = {'Rrup':Rrup,'Rx':Rx,'dip':dip,'Ztor':Ztor,'W':W,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag,'CoefTerms':CoefTerms}
+    kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'dip':dip,'Ztor':Ztor,'W':W,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag,'CoefTerms':CoefTerms}
     values = mapfunc( ASnga, Mw, Rjb, Vs30, T, rake, **kwds )
     print 'Median, SigmaT, Tau, Sigma'
     for i in xrange( len(values) ):
@@ -694,15 +716,26 @@ def AS08nga_test(T,CoefTerms):
 
 
 if __name__ == '__main__':
-    T = 0.1; NewCoefs = {'Vlin':500,'b':-1.024}
-    T = 0.1; NewCoefs = None
-    T = 0.1; NewCoefs = {'Vlin':1032.5,'b':-1.624}
-    CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':NewCoefs}
+    if 1:
+	# SA test 
+	#T = 0.1; NewCoefs = {'Vlin':500,'b':-1.024}
+	#T = 0.1; NewCoefs = None
+	#T = 0.1; NewCoefs = {'Vlin':1032.5,'b':-1.624}
+	NewCoefs = None
+	T = 1.0
+	CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':NewCoefs}
 
-    print 'AS SA at %s'%('%3.2f'%T)
-    ASnga = AS08nga_test(T,CoefTerms)
-    T = -1.0
-    print 'AS PGA:'
-    CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
-    ASnga = AS08nga_test(T,CoefTerms)
+	print 'AS SA at %s'%('%3.2f'%T)
+	ASnga = AS08nga_test(T,CoefTerms)
+	
+	T = -1.0
+	print 'AS PGA:'
+	CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
+	ASnga = AS08nga_test(T,CoefTerms)
+    else: 
+	# Notes: PGV for Vs30 = 760, Z10 = 24, the soil-depth function should be the same as T=1.0
+	T = -2.0
+	print 'AS PGV:'
+	CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
+	ASnga = AS08nga_test(T,CoefTerms)
 

@@ -271,7 +271,7 @@ class BA08_nga:
         return FT   
 
 
-    def moment_function(self,Tother=None):
+    def moment_function(self, Tother=None):
 	"""
 	Magnitude-Moment scaling
 	"""
@@ -432,6 +432,7 @@ def BA08nga_test(T,CoefTerms):
 
     for ivalue in xrange( len(values) ):
 	print values[ivalue]
+
 
 if __name__ == '__main__':
 
