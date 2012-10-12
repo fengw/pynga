@@ -174,6 +174,7 @@ else:
 		    ax.set_ylabel('Error' )
 	    fig.savefig( plotpth + '/CptDistErrRelativeSrc%s.%s'%(sid,pfmt),format=pfmt )
 
+        if 1: 
 	    # Scatter results (to see the distribution)
 	    lons = []; lats = []
 	    Rjb = []; Rrup = []; Rx = []
@@ -190,12 +191,18 @@ else:
 
 	    fig = plt.figure(3) 
 	    i = 1
+	    ax = fig.add_subplot( 2,2,i )
+	    ax.plot( Fault[:,0], Fault[:,1], 'k.' ) # fault surface projection
+	    ax.set_title('fault surface projection')
+	    plt.axis('equal')
 	    for f in [Rjb, Rrup, Rx]: 
-		ax = fig.add_subplot( 2,2,i )
-		ax.plot( Fault[:,0], Fault[:,1], 'r.' ) # fault surface projection
-		sc = ax.scatter( lons, lats, c=f, s=abs(f)*3, edgecolor='k' )
+		ax = fig.add_subplot( 2,2,i+1 )
+		#ax.plot( Fault[:,0], Fault[:,1], 'r.' ) # fault surface projection
+		sc = ax.scatter( lons, lats, c=f, s=abs(f)*50, edgecolor='w' )
 		ax.set_title(DistKey[i-1])
-		plt.axis('equal')
+		#plt.axis('equal')
+		ax.set_ylim([33,35.5])
+		ax.set_xlim([-119.5,-116.5])
 		fig.colorbar(sc)
 		i += 1   
 	    fig.savefig( plotpth + '/CptDistDiffScatterSrc%s.%s'%(sid,pfmt), format=pfmt )
@@ -224,7 +231,7 @@ else:
 	#ax.set_xlim([-119.5,-116.5])
 	for f in [Rjb, Rrup, Rx]: 
 	    ax = fig.add_subplot( 2,2,i+1 )
-	    sc = ax.scatter( lons, lats, c=f, s=abs(f)*3, edgecolor='k' )
+	    sc = ax.scatter( lons, lats, c=f, s=abs(f)*3, edgecolor='w' )
 	    ax.set_title(DistKey[i-1])
 	    ax.set_ylim([33,35.5])
 	    ax.set_xlim([-119.5,-116.5])
@@ -257,7 +264,7 @@ else:
 	#ax.set_xlim([-119.5,-116.5])
 	for f in [Rjb, Rrup, Rx]: 
 	    ax = fig.add_subplot( 2,2,i+1 )
-	    sc = ax.scatter( lons, lats, c=f, s=abs(f)*3, edgecolor='k' )
+	    sc = ax.scatter( lons, lats, c=f, s=abs(f)*3, edgecolor='w' )
 	    ax.set_title(DistKey[i-1])
 	    ax.set_ylim([33,35.5])
 	    ax.set_xlim([-119.5,-116.5])
