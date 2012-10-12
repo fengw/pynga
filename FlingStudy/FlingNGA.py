@@ -110,12 +110,11 @@ if opt == 'ComputeDist':
     inverse = True  # from xy to ll
     ProjDict = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}
 
-    VisualDict=None
     VisualDict={'SiteLoc':(rlon,rlat),'savetype':'pdf','plotpth':plotpth20} 
+    VisualDict=None
 
-    if VisualDict != None:
-	from FlingUtils import *
-	FaultGeom = FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict,VisualDict=VisualDict) 
+    from FlingUtils import *
+    FaultGeom = FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict,VisualDict=VisualDict) 
     
     SiteGeo = rlon, rlat   # all site Geometry
 
@@ -126,33 +125,36 @@ if opt == 'ComputeDist':
 
     meta = dict( 
 	    distance=DistDict, 
+	    FaultGeom=FaultGeom,
 	    )
-    save( metafileD, meta, header = '# Distance MetaData \n' ) 
+    save( metafileD, meta, header = '# Distance and FaultGeom MetaData \n' ) 
 
 
 if opt == 'PlotDist':
+    
     meta1 = load( metafileD )
     Rx = meta1.distance['Rx']
     Rrup = meta1.distance['Rrup']
     Rjb = meta1.distance['Rjb']
     azimuth = meta1.distance['azimuth'] 
     
+    slon2dS, slat2dS = meta1.FaultGeom['FaultSurface'] 
+    slon2dS = np.array(slon2dS) 
+    slat2dS = np.array(slat2dS) 
+
     fig = plt.figure(1) 
-    ax = fig.add_subplot( 221 )
-    ax.plot( azimuth, 'k.' )
-    ax.set_ylabel( 'azimuth' )
-    
-    ax = fig.add_subplot( 222 )
-    ax.plot( azimuth, Rjb, 'k.' )
-    ax.set_ylabel( 'Rjb' )
-    ax = fig.add_subplot( 223 )
-    ax.plot( azimuth, Rx, 'k.' )
-    ax.set_ylabel( 'Rx' )
-    ax = fig.add_subplot( 224 )
-    ax.plot( azimuth, Rrup, 'k.' )
-    ax.set_ylabel( 'Rrup' )
-    fig.savefig( plotpth + 'DistanceAzimuth.pdf', format='pdf' )   
-    #plt.show()
+    i = 1
+    tls = ['azimuth','Rjb','Rrup','Rx']
+    for f in [azimuth, Rjb, Rrup, Rx]:
+	f = np.array(f) 
+	ax = fig.add_subplot( 2,2,i )
+	img = ax.scatter(rlon,rlat,c=f,s=2*abs(f),edgecolor='w')
+	fig.colorbar(img)
+	ax.plot( [slon2dS[0,0], slon2dS[0,-1],slon2dS[0,-1], slon2dS[0,0], slon2dS[0,0]], \
+		 [slat2dS[0,0], slat2dS[0,0],slat2dS[-1,0], slat2dS[-1,0], slat2dS[0,0]],'k' )
+	ax.set_title( tls[i-1] )
+	i = i + 1
+    fig.savefig( plotpth + 'DistanceAzimuthScatter.pdf', format='pdf' )   
 
 
 if opt=='ComputePSA':
@@ -166,7 +168,8 @@ if opt=='ComputePSA':
     Rjb = meta1.distance['Rjb']
 
     start_time = HourMinSecToSec(BlockName=opt)
-    
+    print rake 
+
     psaP = {}
     for inga in xrange( len(NGA_models) ):
 	nga = NGA_models[inga]
@@ -226,11 +229,11 @@ if opt == 'PlotPSA':
 	    ax3.loglog( Rrup, psa0, clrs[inga]+syms[inga] )
     
     ax1.set_xlabel( r'$R_{JB}$ (km)' )
-    ax1.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
+    ax1.set_ylabel( r'5%-damped PSA (g)' )
     ax2.set_xlabel( r'$R_{x}$ (km)' )
-    ax1.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
+    ax1.set_ylabel( r'5%-damped PSA (g)' )
     ax3.set_xlabel( r'$R_{rup}$ (km)' )
-    ax3.set_ylabel( r'5%-damped PSA ($m/s^2$)' )
+    ax3.set_ylabel( r'5%-damped PSA (g)' )
 
     ax1.set_title( 'PSA at T=%s sec'%T0 )
     ax1.legend( lines, NGA_models, loc=0 )

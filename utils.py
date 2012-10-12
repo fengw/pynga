@@ -428,7 +428,7 @@ def rake2ftype_BA(rake):
 	if -30. <= rake <= 30. or 150. <= rake <= 180. or -180. <= rake <=-150.:
 	    ftype = 'SS' # strike-slip
 	elif 30. < rake < 150.:
-	    ftype = 'RS' # reverse
+	    ftype = 'RV' # reverse
 	elif -150. <= rake <= -30.:
 	    ftype = 'NM' # normal
 	else:
@@ -651,6 +651,7 @@ def calc_Rrup( Rx, Ztor, W, dip, azimuth, Rjb=None ):
 
 # Simplified fault geometry (one trace) (all of these geometrical relations satisfy in this simple case)
 # so as the above two functions (simple fault geometry)
+# For Fling study and BBP (simple *.src)
 def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
     """
     Compute Rjb, Rrup, Rx implicitly given fault geometry and site location (in lon/lat)
@@ -736,7 +737,7 @@ def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
 	    azimuth0 = -np.pi/2. * (rx0<0.0) + np.pi/2 * (rx0>=0.0)
 	
 	if ry0 > fymax: 
-	    dy = rx0 - 0.0
+	    dx = rx0 - 0.0
 	    dy = ry0 - fymax
 	    if rx0 > 0.0: 
 		azimuth0 = np.arctan( dx/dy )
@@ -756,21 +757,6 @@ def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
         
         azimuth.append( azimuth0*180./np.pi )
 
-    if 0:
-	# test projection (basis for Rjb and azimuth calculation0
-	import matplotlib.pyplot as plt 
-	fig = plt.figure(1) 
-	ax = fig.add_subplot( 221 )
-	ax.plot(rx,ry,'k^')
-	ax.plot( [fxS[0],fxS[-1],fxS[-1],fxS[0],fxS[0]],[fy[0],fy[0],fy[-1],fy[-1],fy[0]],'b' )
-	ax = fig.add_subplot( 222 )
-	ax.plot( azimuth, 'k.' )
-	ax = fig.add_subplot( 223 )
-	ax.plot( azimuth, Rjb, 'k.' )
-	ax = fig.add_subplot( 224 )
-	ax.plot( azimuth, Rrup, 'k.' )
-	plt.show()
-    
     # Compute Rx from Rjb and Rrup
     Rx = mapfunc( calc_Rx, Rjb, ztor, Fw, dip, azimuth, Rrup=Rrup )
     
@@ -1105,6 +1091,68 @@ def CheckPointInPolygon(point, verts):
     return check
 
 
+def SimpleFaultSurface(FaultSur):
+    """
+    Extend fault surface based on 
+	UCERF-type fault model (fault trace, upper seis depth, lower seis depth, and average dip) 
+	BBP-type (including Fling)
+    """ 
+    pass 
+
+
+def srfFaultSurfaceExtract(SRFfile): 
+    """ 
+    Generate fault surface from SRF file convention 
+    """ 
+    lines = open( SRFfile, 'r' ).readlines()
+    Nseg = int(lines[1].strip().split()[1]) 
+    
+    # loop over segments to get (Nrow,Ncol) of each segments
+    # fault surface for each segment will be read latter
+    FaultSurface = {}
+    FaultSurface['segments'] = {}
+    dims = []
+    dips = []
+    ztors = [] 
+    for iseg in xrange( Nseg ):
+	il0 = 2*iseg + 2  # fault geometry info
+	spl = lines[il0].strip().split()
+	lon0, lat0, L, W, Ncol, Nrow = np.array( spl, 'f' )
+	Ncol, Nrow = int(Ncol), int(Nrow) 
+	dims.append( [Ncol,Nrow] ) 
+
+	il1 = il0 + 1     # focal mechanism and hypocenter info 
+	spl = lines[il1].strip().split()
+	strike, dip, ztor, hypoAS, hypoDD = np.array(spl,'f')
+	dips.append(dip)    # will be used to get the average dip angle (over segments)
+	ztors.append(ztor) 
+    
+    srfFaultSurface['segments']['dims'] = dims
+    srfFaultSurface['segments']['dips'] = dips
+
+    # points on the fault surface (give the fault geometry)
+    # here is just for one segment (general to multiple segments) ... 
+
+    il0 = 2*(Nseg+1) + 1 
+    lons = []; lats = []; deps = []; rakes = []
+    while il0 < len(lines):
+	spl = lines[il0].strip().split()
+	lon, lat, dep, strike, dip, Area, Tinit, dt = np.array( spl, 'f' )
+        lons.append( lon ) 
+	lats.append( lat ) 
+	deps.append( dep ) 
+	il0 = il0 + 1
+	spl = lines[il0].strip().split()
+	rake, slipA_AlongRake, Nt = np.array( spl[:3], 'f' )
+	rakes.append( rake ) # will be used to get average rake (over points)
+	dl = int(Nt/6) + (Nt%6!=0)*1
+	il0 = il0 + dl + 1   # import (similar to the segments jump) ...
+    
+
+    return srfFaultSurface 
+
+
+# General distance calculation (before this, you need to generate FaultGeo)
 def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
     """
     Compute Rjb, Rrup, Rx explicitly given discretized fault (3D) surface geometry and site location (in lon/lat)
@@ -1254,6 +1302,8 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
 	Rx = - distToExtendedTrace   # foot wall 
 
     return Rjb, Rrup, Rx 
+
+
 
 
 

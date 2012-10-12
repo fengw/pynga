@@ -50,7 +50,7 @@ def FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict, VisualDict=None):
 
     # visual test:
     if VisualDict != None:
-	
+	print 'test plt'
 	from mpl_toolkits.mplot3d import Axes3D
 
 	rlon, rlat = VisualDict['SiteLoc']   # site locaitons for visual analysis
@@ -93,8 +93,8 @@ def FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict, VisualDict=None):
 	fig.savefig( plotpth + plotn, format=savetype )
     
     OutputDict = {}
-    OutputDict['FaultPlane'] = slon2d, slat2d, sdep2d
-    OutputDict['FaultSurface'] = slon2dS, slat2dS
+    OutputDict['FaultPlane'] = slon2d.tolist(), slat2d.tolist(), sdep2d.tolist()
+    OutputDict['FaultSurface'] = slon2dS.tolist(), slat2dS.tolist()
     OutputDict['HypoLoc'] = slon,slat,hdep 
     OutputDict['EpicLoc'] = slonS, slatS 
     
