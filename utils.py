@@ -872,15 +872,17 @@ def ptLineDist(x1,y1,x2,y2,px,py):
     py -= y1 
 
     # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
-    dotprod = ( px * x2 + py * y2  ) 
-    projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
+   # dotprod = ( px * x2 + py * y2  ) 
+    #projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
 
     # 2. subtraction to get the closet distance (length of the vector)
-    lenSq = px*px + py*py - projLenSq 
-    if lenSq < 0: 
-	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
-	lenSq = 0 
-    return np.sqrt( lenSq )
+  #  lenSq = px*px + py*py - projLenSq 
+ #   if lenSq < 0: 
+#	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
+#	lenSq = 0 
+    
+    return ( (-x2*py-(-px)*y2)/np.sqrt(x2**2+y2**2) ) 
+    #return np.sqrt( lenSq )
 
 
 def ptSegDist(x1,y1,x2,y2,px,py): 
@@ -1103,9 +1105,9 @@ def CheckPointInPolygon(point, verts):
     return check
 
 
-def getDistances(SiteGeo, FaultGeo, Fast = True):
+def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
     """
-    Compute Rjb, Rrup, Rx explicitly given fault geometry and site location (in lon/lat)
+    Compute Rjb, Rrup, Rx explicitly given discretized fault (3D) surface geometry and site location (in lon/lat)
 	Rx just use the fault trace along-strike and azimuth between the two points at the two ends of the fault and 
 	   site location.
     Inputs: 

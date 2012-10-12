@@ -26,33 +26,113 @@ TsDict = {
 	}
 
 
-# =======================
-# NGA Models
-# =======================
 # Compute NGAs (You can use your coefficients and term flags)
-def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,Ftype=None, NGAs=None, \
-	  Rrup=None,Rx=None,dip=None,W=None,Ztor=None,Zhypo=None,\
-	  Z25=None,Z15=None,Z10=None,azimuth=None, \
-	  Fhw=None,Fnm=None,Frv=None,Fas=0,AB11=None,ArbCB=0,AS09=None,VsFlag=0):
+def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
+	  rake=None, Mech=3, Ftype=None, Fnm=None, Frv=None, \
+	  dip=None, W=None, Ztor=None, Zhypo=None, Fas=0, \
+	  Rrup=None, Rx=None, Fhw=None, azimuth=None, \
+	  VsFlag=0, Z25=None, Z15=None, Z10=None, \
+	  AS09=None, AB11=None, ArbCB=0 ):
     """
-    Compute NGA model
-    Flags: 
-	Fhw: hanning wall flag (default: None) 
-	     0: no hanging wall effect
-	     1: with hanging wall effect
-	Fnm: normal fault
-	Frv: reverse fault
-	Fas: aftershock
-	AB11: updated model by Atkinson and Boore 2011
-	AS09: Abrahamson and Silva 2009 (dip function)
-	VsFlag: default is 0 (inferred); 1: measured
+    Combined function to compute median and standard deviation
+    
+    Arguments (has to be specified)
+    ----------
+    model_name : choose NGA model you want to use (AS,BA,CB,CY) 
+    Mw : moment magnitude 
+    Rjb: Joyner-Boore distance in km
+         defined as the shortest distance from a site to the surface projection of the rupture surface   
+    Vs30: The average shear-wave velocity between 0 and 30-meters depth (site condition) in m/s
+    period: period at which you want to use NGA 
+            This function allow to use periods that are not in the available periods (refer to TsDict) 
+    
+    Keywords 
+    --------
+    [*] shows the default value
+
+    # ================
+    # General Keywords
+    # ================
+    epislon : deviation from the median value [0]
+    NGAs : dictionary to select terms in NGA models and use updated coefficents 
+              default: 
+		 {'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+		  'BA':{'NewCoefs':None,'terms':(1,1,1)},\
+		  'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
+		  'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)}}\
+    
+    # ===============
+    # Source Keywords
+    # ===============
+    rake: rake angle (in degree) [None] 
+          used to determine the fault type
+    Mech: Used in BA model [3]
+          (0:Strike-slip, 1:Normal, 2:Reverse, 3:Unknown 
+    Ftype: fault type string [None]
+          'SS': Strike-slip, 'NM': Normal, 'RV': Reverse, 'U': Unknown (unknown is only used in BA model)
+    Fnm : 0: not a normal fault; 1: Normal [None]
+          default: None
+    Frv : 0: not a reverse fault; 1: reverse [None]
+          default: None
+    dip : dip angle of the fault plane [None]
+          default: None 
+    W : Rupture width (down-dip) [None]
+    Ztor : depth to the top of rupture [None]
+    Zhypo: depth to the hypocenter location [None] 
+    Fas : Aftershock flag [None] 
+          0: Mainshock; 1: Aftershock 
+    
+    # ================
+    # Path Keywords
+    # ================
+    Rrup: Rupture distance in km [None]
+          defined as the distance from a site the to the fault plane
+	  For simple fault geometry, function calc_Rrup in utils.py can be used to compute Rrup, otherwise 
+	  use DistanceToEvenlyGriddedSurface function in utils.py to compute given fault geometry and site location
+    Rx :  horizontal distance between a site and fault trace, in km [None]
+	  defined by extending the fault trace (or the top edge of the rupture) to infinity in both directions. 
+	  For simple fault geometry, function calc_Rx in utils.py can be used to compute Rrup, otherwise, 
+	  use DistanceToEvenlyGriddedSurface function in utils.py to compute given fault geometry and site location
+    Fhw : hanging wall flag [None] 
+          0: in footwall; 1: in hanging wall  
+    azimuth: source-to-site azimuth [None]
+           defined as the angle between the positive fault strike direction and the line connecting 
+	   a site to the closet point on the surface projection of the top edge of rupture (clockwise) 
+	   (used in simple fault geometry) 
+    
+    # =================
+    # Site Keywords
+    # =================
+    VsFlag : Vs30 inferred or measured flag [0]
+            0: inferred Vs30; 1: measured Vs30 
+    Z25: basin depth to S wave velocity equal to 2.5 km/s [None], in km 
+         Z25 could be estimated by using calc_Z25 function in utils.py given Vs30
+    Z15: basin depth to S wave velocity equal to 1.5 km/s [None], in km 
+         used to estimate Z2.5 when Z2.5 = None
+    Z10: basin depth to S wave velocity equal to 1.0 km/s [None], in meter
+         Z10 could be estimated by using calc_Z1 function in utils.py given Vs30
+
+    # =================
+    # Updated models 
+    # =================
+    AS09 : Abrahamson and Silva 2009 updated model (taper5 hanging wall effect) [None]
+    AB11 : Atkinson and Boore 2011 updated model with correction term (after more small magnitude events recordings)
+    
+    # =================
+    # Other Keywords 
+    # =================
+    ArbCB: Campbell and Bozorgnia 2008 model standard deviation [0] 
+           0: output total standard deviation is for GMRotIpp intensity measures (rotation-independent)
+	   1: output total standard deviation is for arbitrary horizontal component
+
     """
+    
     if NGAs == None:
 	NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
 	      'BA':{'NewCoefs':None,'terms':(1,1,1)},\
 	      'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
 	      'AS':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)}}\
-    
+
     dict1 = NGAs
     itmp = 0
     
@@ -223,7 +303,11 @@ def NGA08(model_name, Mw,Rjb,Vs30, period,rake=None,Mech=3,Ftype=None, NGAs=None
                     values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
 
     # outputs
-    NGAmedian = values[:,0]
+    if epislon: 
+	NGAmedian = np.exp( np.log(values[:,0]) + epislon * NGAsigmaT )
+    else: 
+	NGAmedian = values[:,0]  
+
     NGAsigmaT = values[:,1]
     NGAtau = values[:,2]
     NGAsigma = values[:,3]

@@ -526,7 +526,9 @@ class AS08_nga:
 	    output = term1 + a22*np.log(Z10/200.)
 	else:
 	    output = term1
-        return output 
+        #print 'Soil Depth = ', Ti, output 
+
+	return output 
 
 
 
@@ -716,7 +718,7 @@ def AS08nga_test(T,CoefTerms):
 
 
 if __name__ == '__main__':
-    if 1:
+    if 0:
 	# SA test 
 	#T = 0.1; NewCoefs = {'Vlin':500,'b':-1.024}
 	#T = 0.1; NewCoefs = None
