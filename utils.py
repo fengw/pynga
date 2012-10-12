@@ -1094,8 +1094,8 @@ def CheckPointInPolygon(point, verts):
 def SimpleFaultSurface(FaultSur):
     """
     Extend fault surface based on 
-	UCERF-type fault model (fault trace, upper seis depth, lower seis depth, and average dip) 
-	BBP-type (including Fling)
+	a.UCERF-type fault model (fault trace, upper seis depth, lower seis depth, and average dip) 
+	b.BBP-type (including Fling)
     """ 
     pass 
 
@@ -1103,14 +1103,17 @@ def SimpleFaultSurface(FaultSur):
 def srfFaultSurfaceExtract(SRFfile): 
     """ 
     Generate fault surface from SRF file convention 
+    Following the Graves' SRF convention
     """ 
+
     lines = open( SRFfile, 'r' ).readlines()
     Nseg = int(lines[1].strip().split()[1]) 
     
     # loop over segments to get (Nrow,Ncol) of each segments
     # fault surface for each segment will be read latter
-    FaultSurface = {}
-    FaultSurface['segments'] = {}
+    srfFaultSurface = {}
+    srfFaultSurface['segments'] = {}
+    
     dims = []
     dips = []
     ztors = [] 
@@ -1129,18 +1132,19 @@ def srfFaultSurfaceExtract(SRFfile):
     
     srfFaultSurface['segments']['dims'] = dims
     srfFaultSurface['segments']['dips'] = dips
+    srfFaultSurface['segments']['ztors'] = ztors
 
-    # points on the fault surface (give the fault geometry)
-    # here is just for one segment (general to multiple segments) ... 
+    il0 = 2*(Nseg+1) 
+    Npoints = int(lines[il0].strip().split()[1])
 
-    il0 = 2*(Nseg+1) + 1 
-    lons = []; lats = []; deps = []; rakes = []
+    il0 = il0 + 1   # jump to the data block (for each segments, there are a data block)
+    
+    locs = []; rakes = []
     while il0 < len(lines):
 	spl = lines[il0].strip().split()
 	lon, lat, dep, strike, dip, Area, Tinit, dt = np.array( spl, 'f' )
-        lons.append( lon ) 
-	lats.append( lat ) 
-	deps.append( dep ) 
+	locs.append(  [lon,lat,dep] ) 
+
 	il0 = il0 + 1
 	spl = lines[il0].strip().split()
 	rake, slipA_AlongRake, Nt = np.array( spl[:3], 'f' )
@@ -1148,8 +1152,50 @@ def srfFaultSurfaceExtract(SRFfile):
 	dl = int(Nt/6) + (Nt%6!=0)*1
 	il0 = il0 + dl + 1   # import (similar to the segments jump) ...
     
+    Nrow1 = 0; Ncol1 = 0 
+    for iseg in xrange( Nseg ): 
+	Nrow1 += dims[iseg][1]
+	Ncol1 += dims[iseg][0]
+    
+    FaultGeom = np.array( locs ).reshape( (Nrow1, Ncol1, 3) ) 
+    srfFaultSurface['FaultGeom'] = FaultGeom
+    srfFaultSurface['rakes'] = rakes 
 
     return srfFaultSurface 
+
+
+
+def srfFaultSurfaceTest(SRFfile): 
+    """ 
+    test function srfFaultSurfaceExtract
+    """
+    srfFaultSurface = srfFaultSurfaceExtract( SRFfile ) 
+    FaultGeom = srfFaultSurface['FaultGeom'] 
+    
+    # fault surface geometry in 3D
+    slon3d = FaultGeom[:,:,0] 
+    slat3d = FaultGeom[:,:,1] 
+    sdep3d = FaultGeom[:,:,2] 
+
+    # fault surface projection in 2D (depth = 0 )
+    sdep2d = np.zeros( len(slon3d) ).tolist()  
+
+    # plot (depends on matplotlib)
+    import matplotlib.pyplot as plt 
+    from mpl_toolkits.mplot3d import Axes3D 
+
+    fig = plt.figure(1) 
+    ax = Axes3D(fig) 
+    ax.plot( slon3d, slat3d, sdep2d, 'ro' )
+    linec = ax.plot_wireframe( slon3d, slat3d, -sdep3d )
+    linec.set_color('b')
+    
+    ax.set_zlim3d(-50, 0) 
+    ax.set_xlabel( 'lon' )
+    ax.set_ylabel( 'lat' )
+    ax.set_zlabel( 'depth (km)' ) 
+    fig.savefig( './tmp/srfFaultSurfaceTest.png', format='png')
+
 
 
 # General distance calculation (before this, you need to generate FaultGeo)
@@ -1411,5 +1457,15 @@ def GetIntraInterResiduals(residualT, EQID, sigmaT, tau, sigma, AS=None):
     epsilonT = residual_total / sigmaT
 
     return epsilonT, eta, epsilon
+
+
+
+if __name__ == '__main__': 
+    
+    # Test srfFaultSurfaceExtract
+    FilePath ='./Validation/DistancesTestFiles/inputs/158_0' 
+    FileName = '158_0.txt.variation-s0000-h0000'  
+    SRFfile = os.path.join( FilePath, FileName ) 
+    srfFaultSurfaceTest(SRFfile) 
 
 

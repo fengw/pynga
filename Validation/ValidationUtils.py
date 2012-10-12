@@ -13,6 +13,7 @@ from my_util.image import *
 from pynga import *
 from pynga.utils import *
 
+
 class ValidationUtils:
     """
     Validation of NGA models (median and sigmas) and distance calculation
@@ -33,73 +34,48 @@ class ValidationUtils:
 	# figure save type
 	self.pfmt = 'png' 
         
-	if nga != None:
-	    self.nga = nga 
-	    self.NGAmodel = self.nga + '08'
-	    # plot pths for NGA model validation
-	    pltpth00 = self.plotpth + '/ValidationNGAs' 
-	    pltpth0 = pltpth00 + '/' + self.NGAmodel 
-	    self.pltpth1 = pltpth0 + '/' + 'RMS'
-	    self.pltpth2 = pltpth0 + '/' + 'Scatter'
-	    for f in [pltpth00, pltpth0, self.pltpth1, self.pltpth2]:
-		if not os.path.exists( f ):
-		    os.mkdir( f )
+	self.nga = nga 
+	self.NGAmodel = self.nga + '08'
+	# plot pths for NGA model validation
+	pltpth00 = self.plotpth + '/ValidationNGAs' 
+	pltpth0 = pltpth00 + '/' + self.NGAmodel 
+	self.pltpth1 = pltpth0 + '/' + 'RMS'
+	self.pltpth2 = pltpth0 + '/' + 'Scatter'
+	for f in [pltpth00, pltpth0, self.pltpth1, self.pltpth2]:
+	    if not os.path.exists( f ):
+		os.mkdir( f )
 
-	    # Period List for NGA models
-	    TsDict = {
-		    'BA': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
-			  0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],   # last two: PGA, PGV, 
-		    'CB': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
-			  0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
-		    'CY': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
-			  0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
-		    'AS': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
-			  0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
-		    }
+	# Period List for NGA models
+	TsDict = {
+		'BA': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+		      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],   # last two: PGA, PGV, 
+		'CB': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+		      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+		'CY': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+		      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+		'AS': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+		      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+		}
 
-	    self.periods = TsDict[nga] 
-	    self.NT = len(self.periods) 
-	    
-	    headers = 9*'%s   '%('Mw','Rrup','Rjb','Rx','Dip','W','Ztor','Vs30','Zsed')
-	    Str = ''; xlabs = []
-	    for ip in xrange( self.NT ):
-		Ti = self.periods[ip]
-		if Ti == -1: 
-		    Str += 'PGA    '
-		    xlabs.append( 'PGA' )
-		if Ti == -2:
-		    Str += 'PGV'  
-		    xlabs.append( 'PGV' )
-		if Ti not in [-1,-2]:
-		    Str += 'SA%.3f    '%Ti
-		    xlabs.append( '%s'%'%.3f'%Ti )
+	self.periods = TsDict[nga] 
+	self.NT = len(self.periods) 
+	
+	headers = 9*'%s   '%('Mw','Rrup','Rjb','Rx','Dip','W','Ztor','Vs30','Zsed')
+	Str = ''; xlabs = []
+	for ip in xrange( self.NT ):
+	    Ti = self.periods[ip]
+	    if Ti == -1: 
+		Str += 'PGA    '
+		xlabs.append( 'PGA' )
+	    if Ti == -2:
+		Str += 'PGV'  
+		xlabs.append( 'PGV' )
+	    if Ti not in [-1,-2]:
+		Str += 'SA%.3f    '%Ti
+		xlabs.append( '%s'%'%.3f'%Ti )
 
-	    self.FileHeaders = headers + Str
-	    self.xlabs = xlabs 
-
-        else: 
-	    # Plot pths for Distance Calculation ..
-	    pltpth11 = self.plotpth + '/ValidationDists' 
-	    for f in [pltpth11,]:
-		if not os.path.exists( f ):
-		    os.mkdir( f )
-            
-	    # ....
-    
-    # =======================================================================================================
-    # Validate Distance Calculation related
-    # =======================================================================================================
-    def GenSiteGeo(self,SiteGeo):
-	# lon,lat,dep (one point)
-	self.SiteGeo = SiteGeo 
-   
-    # generate fault surface using existing informations 
-    def GenFaultGeo(self,FaultGeo): 
-	self.FaultGeo = FaultGeo 
-    
-
-    def CalcDists(self): 
-        pass
+	self.FileHeaders = headers + Str
+	self.xlabs = xlabs 
 
 
     # ===========================================================================
