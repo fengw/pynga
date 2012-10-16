@@ -1571,7 +1571,7 @@ def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeis
 	else: 
 	    Rx = -distToExtendedTrace 
 
-	if 0: 
+	if 1: 
 	    # test plot
 	    from mpl_toolkits.mplot3d import Axes3D 
 	    FaultTrace = np.array( FaultTrace )
@@ -1579,7 +1579,7 @@ def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeis
 	    ax = Axes3D(fig) 
 	    verts1 = np.array( vertsClosed )
 	    ax.plot( verts1[:,0], verts1[:,1], -verts1[:,2], 'b-' )
-	    ax.plot( FaultTrace[:,0], FaultTrace[:,1], FaultTrace[:,2]*0.0, 'bo' )
+	    ax.plot( FaultTrace[:,0], FaultTrace[:,1], FaultTrace[:,2]*0.0, 'ko' )
 	    ax.plot( [SiteGeom[0]], [SiteGeom[1]], [0.0], 'r^' )
 	    plt.show()
 	
