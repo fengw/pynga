@@ -47,6 +47,58 @@ else:
     
     DistKey = ['Rjb','Rrup','Rx'] 
 
+    if opt == 'TestDist': 
+	# Test distance calculation (analytical and discretized) 
+
+	# Generate fault geometry (fault surface)
+	FaultGeom = [] 
+        
+	SiteGeom = [-118.243,34.053,0.0] 
+        Rjb0, Rrup0, Rx0 = [1.95,3.58,-1.93]   # computed by OpenSHA (Rjb,Rrup,Rx)
+        
+	SiteGeom = [-118.286, 34.0192,0.0]
+	Rjb0, Rrup0, Rx0 = [7.16,7.76,-7.16]
+	print 'OpenSHA calculation: '
+	print Rjb0, Rrup0, Rx0 
+
+	point0 = SiteGeom 
+	
+	# Method 1 (discretized)
+	# read from srf file (Elysian Park, upper)
+	SRFfile = inpth + '/158_0/158_0.txt.variation-s0000-h0000'
+	srfFaultSurface = srfFaultSurfaceExtract( SRFfile ) 
+	FaultGeom = srfFaultSurface['FaultGeom'] 
+	Nrow,Ncol,Nelm =  FaultGeom.shape
+
+	# method 1 (using srf file)
+	Rjb1, Rrup1, Rx1 = DistanceToEvenlyGriddedSurface( SiteGeom, FaultGeom )
+	print 'Using SRF file:' 
+	print Rjb1, Rrup1, Rx1 
+
+	# method 2 (simple fault)
+	UpperSeisDepth = 3.0 
+	LowerSeisDepth = 15.0 
+	AveDip = 50.  
+	FaultTrace0 = [[34.06834,-118.09977],[34.061222,-118.130356],[34.067455,-118.234761],[34.112583,-118.29677]]  # Elysian Park (Upper)
+	
+	Npoints = len(FaultTrace0)
+	FaultTrace1 = []
+	for ipoint in xrange( Npoints ):
+	    FaultTrace1.append( [FaultTrace0[ipoint][1],FaultTrace0[ipoint][0], UpperSeisDepth] )
+	
+	daa = None; ddd = None 
+	Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+	print 'Faster way: '
+	print Rjb2, Rrup2, Rx2 
+
+        # evenlygrided surface
+	daa = ddd = 1.0
+	Rjb3, Rrup3, Rx3 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+	print 'Slow way: '
+	print Rjb3,Rrup3,Rx3
+
+
+
     if opt == 'CalcDist': 
 	# Generate fault geometry (fault surface)
 	FaultGeom = [] 

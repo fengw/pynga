@@ -775,6 +775,7 @@ def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
 # Utilities for general distance calculations (in spherical coordinates and earth-flatten)
 # =======================================================================================
 R = 6371.   # Earth radius (km)
+DegToKm = np.pi/180. * R   # 1 degree to km
 tol = 1e-10 
 def LonLatToAngleDistance( loc1, loc2, \
 	CalcRadius=True, \
@@ -845,183 +846,6 @@ def LonLatToAngleDistance( loc1, loc2, \
     return Radius, horzDistance, verzDistance, Azimuth1to2
 
 
-# ptLineDist and ptSegDist are referred from java/awt/geom/Line2D.java.htm
-def ptLineDist(x1,y1,x2,y2,px,py): 
-    """
-    Compute the point (px,py) to line (x1,y1)=>(x2,y2) allowing infinitely-extending of the line 
-    Not used
-    """ 
-    # adjust vectors relative to point (x1,y1)
-    x2 -= x1
-    y2 -= y1 
-    px -= x1 
-    py -= y1 
-
-    # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
-   # dotprod = ( px * x2 + py * y2  ) 
-    #projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
-
-    # 2. subtraction to get the closet distance (length of the vector)
-  #  lenSq = px*px + py*py - projLenSq 
- #   if lenSq < 0: 
-#	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
-#	lenSq = 0 
-    
-    return ( (-x2*py-(-px)*y2)/np.sqrt(x2**2+y2**2) ) 
-    #return np.sqrt( lenSq )
-
-
-def ptSegDist(x1,y1,x2,y2,px,py): 
-    """
-    Compute the point (px,py) to line (x1,y1)=>(x2,y2) without infinitely-extending of the line 
-    Distance measured is the distance between the specified point and the closest point between 
-    the specified end points (x1,y1) and (x2,y2)
-    """ 
-    # adjust vectors relative to point (x1,y1)
-    x2 -= x1
-    y2 -= y1 
-    px -= x1 
-    py -= y1 
-
-    # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
-    dotprod = ( px * x2 + py * y2  ) 
-    if dotprod <= 0.0: 
-	# (px,py) is on the side of (x1,y1) (projection of the point (px,py) is not on the segment)
-	projLenSq = 0.0 
-    else:
-	# check the other side relationship
-	px = x2-px
-	py = y2-py 
-        dotprod = px*x2 + py*y2 
-	if dotprod <= 0.0: 
-	    # (px,py) is on the side of (x2,y2) (projection of the point (px,py) is not on the segment)
-	    projLenSq = 0.0 
-	else: 
-	    # point (px,py) 's projection is in between (x1,y1) and (x2,y2) 
-	    # same as the ptLineDist function 
-	    projLenSq = dotprod * dotprod / (x2*x2 + y2*y2)
-
-    # 2. subtraction to get the closet distance (length of the vector)
-    lenSq = px*px + py*py - projLenSq    # if projLenSq = 0.0, then the distance would be either original (px,py) to (x1,y1) or (x2,y2) 
-    if lenSq < 0: 
-	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
-	lenSq = 0.0
-    return np.sqrt( lenSq  )
-
-
-def distToLine(loc1, loc2, loc3, Fast=False):
-    """
-    Compute the shortest distance between a point (loc3) and a line (great circle) 
-    that extends infinitely in both directiions. Depth is ignored.
-    refer to: http://williams.best.vwh.net/avform.htm#XTE
-    # this distance could be postive or negative
-    """
-    lon1, lat1 = loc1[:2] * np.pi/180. 
-    lon2, lat2 = loc2[:2] * np.pi/180.
-    lon3, lat3 = loc3[:2] * np.pi/180.
-    
-    if Fast: 
-	# with earth-flatten approximation (faster) 
-	# used in shorter distance (<=200km)
-	lonScale = np.cos( 0.5*lat3 + 0.25*lat1 + 0.25*lat2 )   # earth-flatten approximation factor
-	x2 = (lon2-lon1)*lonScale 
-	y2 = lat2-lat1
-	x3 = (lon3-lon1)*lonScale
-	y3 = lat3 - lat1
-	# x1=y1 = 0 
-	Term1 = (x2*(-y3)-(-x3)*y2)/np.sqrt(x2**2+y2**2) 
-	# originally, Term1 = 
-	# abs( (x3-x1)*(y2-y1) - (y3-y1)*(x2-x1) ) / np.sqrt((x2-x1)**2+(y2-y1)**2.) 
-	# for x1=y1=0, Term1 = abs( x3*y2 - y3*x2 ) / [] = abs( -y3*x2 - (-x3)*y2 ) / []
-	# but here, Term1 has sign which indicates which side of point3 is located relative to the line vector (1to2)
-	# +: right; -:left
-	return Term1 * R 
-
-    else:
-	# orignial method to compute the distance from a point to a line (spherical trigonometry)
-	# sin(A)/sin(a) = sin(B)/sin(b) = sin(C)/sin(c) 
-	# A, B, and C: angle between surface circle 
-	# a, b, and c: center angle of surface circle (great)
-	a13,hD,vD,az13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
-	a12,hD,vD,az12 = LonLatToAngleDistance(loc1,loc2,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
-	Daz13az12 = az13-az12 
-	xtd = np.arcsin( np.sin(a13)*np.sin(Daz13az12) ) 
-	if abs(xtd) < tol: 
-	    return 0.0   # point3 is on the line 
-	else: 
-	    return xtd * R     # xtd could >0 or <0 to identify the location of the point3 relative to the line
-        # you could use this to compute Rx without extend your fault trace to infinite, but it takes time
-
-
-def distToLineSeg( loc1,loc2,loc3, Fast=False ): 
-    """
-    Compute distance between point3 and line defined by point1 and point2 
-    loc1, loc2, loc3 are list with 3 elements
-    There are three cases: the projection point of loc3 on: 
-    the loc1 side, on the loc2 side, in between loc1 and loc2
-    """
-    loc1 = np.array( loc1 ) 
-    loc2 = np.array( loc2 ) 
-    loc3 = np.array( loc3 )
-    lon1, lat1 = loc1[:2] * np.pi/180. 
-    lon2, lat2 = loc2[:2] * np.pi/180.
-    lon3, lat3 = loc3[:2] * np.pi/180.
-    
-    if Fast: 
-	lonScale = np.cos( 0.5*lat3 + 0.25*lat1 + 0.25*lat2 ) 
-	x2 = (lon2-lon1)*lonScale 
-	y2 = lat2-lat1
-	x3 = (lon3-lon1)*lonScale
-	y3 = lat3 - lat1
-	Term1 = ptSegDist( 0, 0, x2, y2, x3, y3 )   # always positive
-	return Term1 * R   
-
-    else:
-	# use cos(c) = cos(a)cos(b) + sin(a)sin(b)cos(C) to get
-	a13, hD13, vD13, az13 = LonLatToAngleDistance(loc1,loc3,Fast=Fast)
-	a12, hD12, vD12, az12 = LonLatToAngleDistance(loc1,loc2,Fast=Fast)
-	Daz13az12 = az13-az12 
-
-        # cross-track distance (in radius)
-	xtd = np.arcsin( np.sin(a13)*np.sin(Daz13az12) ) 
-
-	# along-track distance (in km )
-	atd = np.arccos( np.cos(a13)/np.cos(xtd) ) * R 
-	a23, hD23, vD23, az23 = LonLatToAngleDistance(loc2,loc3,CalcRadius=False,CalcDist=True,Fast=Fast,CalcAzimuth=False)
-
-	# check if beyond p3 (should be p2?) (different from the original Rx definition?)
-	if atd > hD12: 
-	    print 'Beyond p2'
-	    return hD23 
-	
-	# check if beyond p1 
-	if np.cos(Daz13az12)<0:
-	    print 'Beyond p1'
-	    return hD13 
-
-        # projection of the point is within the two points
-	if abs(xtd) < tol: 
-	    return 0.0   # point3 is on the line 
-	else: 
-	    return abs(xtd) * R   
-
-
-def minDistToLineSeg( loc, segs, Fast=False ): 
-    """
-    Compute minimum distance between loc and a line made of segments
-    Segments in line are contrained by two points loc1, loc2
-    """
-    Npoints = len(segs) 
-    minDist = 1000.
-    for iseg in range(1,Npoints): 
-	p1 = segs[iseg-1] 
-	p2 = segs[iseg]
-	dist = abs( distToLineSeg(p1,p2,loc,Fast=Fast) ) 
-	if dist <= minDist: 
-	    minDist = dist 
-    return minDist  
-
-
 def EndLocation(loc1, vector): 
     """
     Given Vector and its starting point, find the end point of the vector, where
@@ -1067,7 +891,7 @@ def CheckPointInPolygon(point, verts):
     Ndim = len(point) 
     verts = np.array( verts )
     dim = verts.shape[1] 
-    if Ndim != dim or Ndim != 2 or dim != 2: 
+    if Ndim != dim:
 	print 'point and shape should be defined with two coordinates'
 	raise ValueError
     
@@ -1091,14 +915,492 @@ def CheckPointInPolygon(point, verts):
     return check
 
 
-def SimpleFaultSurface(FaultSur):
+
+# point to 2D line
+def ptToLine2D(x1,y1,x2,y2,px,py): 
+    """
+    Compute the point (px,py) to line (x1,y1)=>(x2,y2) allowing infinitely-extending of the line 
+    Not used
+    """ 
+    
+    # adjust vectors relative to point (x1,y1)
+    x2 -= x1
+    y2 -= y1 
+    px -= x1 
+    py -= y1 
+
+    # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
+   # dotprod = ( px * x2 + py * y2  ) 
+    #projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
+
+    # 2. subtraction to get the closet distance (length of the vector)
+  #  lenSq = px*px + py*py - projLenSq 
+ #   if lenSq < 0: 
+#	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
+#	lenSq = 0 
+    
+    return ( (-x2*py-(-px)*y2) * 1.0 /np.sqrt(x2**2+y2**2) ) 
+    #return np.sqrt( lenSq )
+
+
+# great circle distance (point to 2D line)
+def distToLine2D(loc1, loc2, loc3, Fast=False):
+    """
+    Compute the shortest distance between a point (loc3) and a line (great circle) 
+    that extends infinitely in both directiions. Depth is ignored.
+    refer to: http://williams.best.vwh.net/avform.htm#XTE
+    # this distance could be postive or negative
+    """
+    loc1 = np.array( loc1 ) 
+    loc2 = np.array( loc2 ) 
+    loc3 = np.array( loc3 )
+    lon1, lat1 = loc1[:2] * np.pi/180. 
+    lon2, lat2 = loc2[:2] * np.pi/180.
+    lon3, lat3 = loc3[:2] * np.pi/180.
+    
+    if Fast: 
+	# with earth-flatten approximation (faster) 
+	# used in shorter distance (<=200km)
+	lonScale = np.cos( 0.5*lat3 + 0.25*lat1 + 0.25*lat2 )   # earth-flatten approximation factor
+	x2 = (lon2-lon1)*lonScale 
+	y2 = lat2-lat1
+	x3 = (lon3-lon1)*lonScale
+	y3 = lat3 - lat1
+	# x1=y1 = 0 
+	Term1 = (x2*(-y3)-(-x3)*y2)/np.sqrt(x2**2+y2**2) 
+	# originally, Term1 = 
+	# abs( (x3-x1)*(y2-y1) - (y3-y1)*(x2-x1) ) / np.sqrt((x2-x1)**2+(y2-y1)**2.) 
+	# for x1=y1=0, Term1 = abs( x3*y2 - y3*x2 ) / [] = abs( -y3*x2 - (-x3)*y2 ) / []
+	# but here, Term1 has sign which indicates which side of point3 is located relative to the line vector (1to2)
+	# +: right; -:left
+	return Term1 * R 
+
+    else:
+	# orignial method to compute the distance from a point to a line (spherical trigonometry)
+	# sin(A)/sin(a) = sin(B)/sin(b) = sin(C)/sin(c) 
+	# A, B, and C: angle between surface circle 
+	# a, b, and c: center angle of surface circle (great)
+	a13,hD,vD,az13 = LonLatToAngleDistance(loc1,loc3,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
+	a12,hD,vD,az12 = LonLatToAngleDistance(loc1,loc2,CalcRadius=True,CalcDist=False,CalcAzimuth=True)
+	Daz13az12 = az13-az12 
+	xtd = np.arcsin( np.sin(a13)*np.sin(Daz13az12) ) 
+	if abs(xtd) < tol: 
+	    return 0.0   # point3 is on the line 
+	else: 
+	    return xtd * R     # xtd could >0 or <0 to identify the location of the point3 relative to the line
+        # you could use this to compute Rx without extend your fault trace to infinite, but it takes time
+
+
+# deal with line segments
+def minDistToLine2D( loc, segs, Fast=False ): 
+    """
+    Compute minimum distance between loc and a line made of segments
+    Segments in line are contrained by two points loc1, loc2
+    """
+    Npoints = len(segs) 
+    minDist0 = 1000.
+    for iseg in range(1,Npoints): 
+	p1 = segs[iseg-1] 
+	p2 = segs[iseg]
+	dist = distToLine2D(p1,p2,loc,Fast=Fast) 
+	dist0 = abs( dist ) 
+	print dist0
+	if dist0 <= minDist0: 
+	    minDist0 = dist0 
+	    minDist = dist
+    return minDist  
+
+
+
+# point to line segments
+# Used by Rjb and Rx
+def ptToLineSeg2D(x1,y1,x2,y2,px,py): 
+    """
+    Compute the point (px,py) to line (x1,y1)=>(x2,y2) without infinitely-extending of the line 
+    Distance measured is the distance between the specified point and the closest point between 
+    the specified end points (x1,y1) and (x2,y2)
+    """ 
+    # adjust vectors relative to point (x1,y1)
+    x2 -= x1
+    y2 -= y1 
+    px -= x1 
+    py -= y1 
+
+    # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
+    dotprod = ( px * x2 + py * y2  ) 
+    if dotprod <= 0.0: 
+	# (px,py) is on the side of (x1,y1) (projection of the point (px,py) is not on the segment)
+	projLenSq = 0.0 
+    else:
+	# check the other side relationship
+	px = x2-px
+	py = y2-py 
+        dotprod = px*x2 + py*y2 
+	if dotprod <= 0.0: 
+	    # (px,py) is on the side of (x2,y2) (projection of the point (px,py) is not on the segment)
+	    projLenSq = 0.0 
+	else: 
+	    # point (px,py) 's projection is in between (x1,y1) and (x2,y2) 
+	    # same as the ptLineDist function 
+	    projLenSq = dotprod * dotprod / (x2*x2 + y2*y2)
+
+    # 2. subtraction to get the closet distance (length of the vector)
+    lenSq = px*px + py*py - projLenSq    # if projLenSq = 0.0, then the distance would be either original (px,py) to (x1,y1) or (x2,y2) 
+    if lenSq < 0: 
+	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
+	lenSq = 0.0
+    return np.sqrt( lenSq  )
+
+
+# great circle
+def distToLineSeg2D( loc1,loc2,loc3, Fast=False ): 
+    """
+    Compute distance between point3 and line defined by point1 and point2 
+    loc1, loc2, loc3 are list with 3 elements
+    There are three cases: the projection point of loc3 on: 
+    the loc1 side, on the loc2 side, in between loc1 and loc2
+    2D
+    """
+    loc1 = np.array( loc1 ) 
+    loc2 = np.array( loc2 ) 
+    loc3 = np.array( loc3 )
+    lon1, lat1 = loc1[:2] * np.pi/180. 
+    lon2, lat2 = loc2[:2] * np.pi/180.
+    lon3, lat3 = loc3[:2] * np.pi/180.
+    
+    if Fast: 
+	lonScale = np.cos( 0.5*lat3 + 0.25*lat1 + 0.25*lat2 ) 
+	x2 = (lon2-lon1)*lonScale 
+	y2 = lat2-lat1
+	x3 = (lon3-lon1)*lonScale
+	y3 = lat3 - lat1
+	Term1 = ptToLineSeg2D( 0, 0, x2, y2, x3, y3 )   # always positive
+	return Term1 * R   
+
+    else:
+	# use cos(c) = cos(a)cos(b) + sin(a)sin(b)cos(C) to get
+	a13, hD13, vD13, az13 = LonLatToAngleDistance(loc1,loc3,Fast=Fast)
+	a12, hD12, vD12, az12 = LonLatToAngleDistance(loc1,loc2,Fast=Fast)
+	Daz13az12 = az13-az12 
+
+        # cross-track distance (in radius)
+	xtd = np.arcsin( np.sin(a13)*np.sin(Daz13az12) ) 
+
+	# along-track distance (in km )
+	atd = np.arccos( np.cos(a13)/np.cos(xtd) ) * R 
+	a23, hD23, vD23, az23 = LonLatToAngleDistance(loc2,loc3,CalcRadius=False,CalcDist=True,Fast=Fast,CalcAzimuth=False)
+
+	# check if beyond p3 (should be p2?) (different from the original Rx definition?)
+	if atd > hD12: 
+	    #print 'Beyond p2'
+	    return hD23 
+	
+	# check if beyond p1 
+	if np.cos(Daz13az12)<0:
+	    #print 'Beyond p1'
+	    return hD13 
+
+        # projection of the point is within the two points
+	if abs(xtd) < tol: 
+	    return 0.0   # point3 is on the line 
+	else: 
+	    return abs(xtd) * R   
+
+# segments
+def minDistToLineSeg2D( loc, segs, Fast=False ): 
+    """
+    Compute minimum distance between loc and a line made of segments
+    Segments in line are contrained by two points loc1, loc2
+    """
+    Npoints = len(segs) 
+    minDist = 1000.
+    for iseg in range(1,Npoints): 
+	p1 = segs[iseg-1] 
+	p2 = segs[iseg]
+	dist = abs( distToLineSeg2D(p1,p2,loc,Fast=Fast) ) 
+	if dist <= minDist: 
+	    minDist = dist 
+    return minDist  
+
+
+
+
+# Used by Rrup based on just corner points
+def ptToLineSeg3D(point, point1, point2,Rscale=1.0):
+    """
+    get your coordinate as float number
+    default is in Cartesian 
+    if you set Rscale=6371, it will give you the point and compute further use LonLatToAngleDistance
+    http://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
+    """
+    points = [point,point1,point2]
+    points = np.array( points, 'f' )
+    p0 = points[0,:]
+    p1 = points[1,:]
+    p2 = points[2,:]
+    v = p2 - p1
+    w0 = p0 - p1
+    w1 = p0 - p1
+    dotprod = sum(w0*v) 
+    if dotprod <= 0: 
+	#print 'beyond point1'
+	Ploc = p1
+	if Rscale != 1.0: 
+	    a, hD, vD, az = LonLatToAngleDistance(Ploc, p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+	    dist = np.sqrt( hD**2+vD**2 )
+	else:
+	    w0[:2] *= Rscale
+	    dist = np.sqrt( sum( w0**2 ) )
+    else: 
+	dotprod = sum(w1*v) 
+	if dotprod >= 0: 
+	 #   print 'beyond point2'
+	    Ploc = p2
+	    if Rscale != 1.0: 
+		a, hD, vD, az = LonLatToAngleDistance(Ploc,p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+		dist = np.sqrt( hD**2+vD**2 )
+	    else:
+		w1[:2] *= Rscale
+		dist = np.sqrt( sum( w1**2 ) )
+	else: 
+	    # get the projected point on the 3D line
+	    n = v/np.sqrt(sum(v*v))     # unit vector to show the line direction 
+	    w10 = p1-p0   
+	    w10n = sum( w10*n ) * n
+	    Ploc = w10 - w10n + p0 
+
+            if Rscale != 1.0:
+		a, hD, vD, az = LonLatToAngleDistance(Ploc,p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+		dist = np.sqrt( hD**2+vD**2 )
+	    else: 
+		vn = np.cross( v, w0 )
+		u = p2-p1
+		u[:2] *= Rscale
+		vn[:2] *= Rscale
+		dist = np.sqrt( sum(vn*vn) / sum(u*u) ) 
+    return dist, Ploc
+
+
+def minDistToLineSeg3D( loc, segs, Rscale=1.0 ):
+    """
+    Compute minimum distance between loc and a line made of segments
+    Segments in line are contrained by two points loc1, loc2
+    """
+    Npoints = len(segs) 
+    minDist = 1000.
+    for iseg in range(1,Npoints): 
+	p1 = segs[iseg-1] 
+	p2 = segs[iseg]
+	dist_tmp, Ploc = ptToLineSeg3D(loc,p1,p2,Rscale=Rscale) 
+	a, hD, vD, az = LonLatToAngleDistance(loc,Ploc,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+	dist = np.sqrt( hD**2+vD**2 )
+	#print 'Line %s: '%iseg, dist
+	if dist <= minDist: 
+	    minDist = dist 
+    return minDist  
+
+
+def ptToSurf3D(point0,point1,point2,point3):
+    """
+    point and plane relationship 
+    distance and the coordinate on a plane
+    if points are on spherical earth, then you need do the correction before using this function
+    reference: 
+    http://jtaylor1142001.net/calcjat/Solutions/VPlanes/VP3Pts.htm
+    http://www.9math.com/book/projection-point-plane
+
+    Input: 
+	point0: a point outside or within the plane
+	points (3 row, 3 col LIST contains three know points on the plane)
+    Output:
+	D: distance between point0 and the plane
+	point1: projection point of point0 on the plane
+    """
+    
+    points = [point1,point2,point3]
+    points = np.array(points)
+    vn = np.cross(points[1,:]-points[0,:], points[2,:]-points[0,:])  # plane normal
+    vn = vn / np.sqrt( np.dot(vn,vn) )   # get the normal vector of the plane
+
+    a = vn[0]; b = vn[1]; c = vn[2]
+    d = -a*points[0,0]-b*points[0,1]-c*points[0,2]
+    
+    u,v,w = point0
+    
+    L1 = a*u+b*v+c*w+d
+    L2 = a**2+b**2+c**2
+    x = u-a*L1/L2
+    y = v-b*L1/L2
+    z = w-c*L1/L2
+
+    point1 = x,y,z
+    dist = abs( L1 )/ np.sqrt( L2 )
+
+    return dist, point1
+
+
+def minDistToSurfSeg( loc, segs, Rscale=1.0 ):
+    """
+    Compute minimum distance between loc and a line made of segments
+    Segments in line are contrained by two points loc1, loc2
+    """
+    Nseg = len(segs) 
+    minDist = 1000.
+    for iseg in range(Nseg):
+	points = segs[iseg]  # there are fout points
+	point1, point2, point3, point4 = points
+	tmp_dist, Ppoint = ptToSurf3D(loc, point1,point2, point3 )
+	a, hD, vD, az = LonLatToAngleDistance(loc,Ppoint,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+	check = CheckPointInPolygon( Ppoint, points )
+	if check: 
+	    dist = np.sqrt(hD**2+vD**2)
+        else: 
+	    pointsClosed = points + [points[0]]
+	    dist = minDistToLineSeg3D(loc, pointsClosed, Rscale=Rscale )
+	if dist <= minDist: 
+	    minDist = dist 
+#	print 'Segment %s: '%iseg, minDist
+
+    return minDist  
+
+
+
+
+# surface extension
+def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None):
     """
     Extend fault surface based on 
 	a.UCERF-type fault model (fault trace, upper seis depth, lower seis depth, and average dip) 
 	b.BBP-type (including Fling)
+    Using Stirling method (downdip extension perpendicular to the average strike when dealing with 
+    multiple segments
     """ 
-    pass 
+    
+    AveDip = AveDip * np.pi / 180. # To Radius 
+    vD = LowerSeisDepth - UpperSeisDepth 
+    hD = vD / np.tan( AveDip ) 
+    
+    FaultGeom = []
+     
+    Npoints = len(FaultTrace) 
+    Nsegs = Npoints - 1
+    
+    if Nsegs == 1: 
+	iseg = 0
+	loc1 = FaultTrace[iseg] 
+	loc2 = FaultTrace[iseg+1]
+	a,hD0,vD0,az = LonLatToAngleDistance( loc1, loc2, CalcRadius=False, CalcAzimuth=True, CalcDist=True )
+        
+	# extension if given grid space 
+	if GridSpaceAlongStrike and GridSpaceDownDip: 
+	    daa = GridSpaceAlongStrike
+	    ddd = GridSpaceDownDip 
+	elif GridSpaceAlongStrike and not GridSpaceDownDip: 
+	    daa = ddd = GridSpaceAlongStrike
+	elif not GridSpaceAlongStrike and GridSpaceDownDip: 
+	    daa = ddd = GridSpaceDownDip
+	else: 
+	    # no grid generation (just get four corner points)
+	    FaultTrace1 = []    # downdip extension points 
+	    vector = [az+np.pi/2,hD,vD]    # downdip extension 
+	    
+	    loc0 = loc2
+	    loc00 = EndLocation( loc0, vector ) 
+	    FaultTrace2.append( loc00 )
+	    
+	    loc0 = loc1
+	    loc00 = EndLocation( loc0, vector ) 
+	    FaultTrace1.reverse()
+	    FaultTrace = FaultTrace + FaultTrace1
+            FaultTraceSeg = [FaultTrace,]
+	    return FaultTrace, FaultTraceSeg
 
+	# Extended fault surface grid
+	Ncol = int(hD0 / daa + 1)
+	Nrow = int(vD / np.sin(AveDip) / ddd + 1)
+        
+	for irow in xrange( Nrow ): 
+	    vector0 = [az+np.pi/2, ddd*np.cos(AveDip), ddd*np.sin(AveDip)]
+	    if irow == 0: 
+		FaultDD = FaultTrace[0] 
+	    else: 
+		FaultDD = EndLocation( FaultDD, vector0 ) 
+	    FaultAA = [FaultDD,]
+	    for icol in xrange( 1, Ncol ): 
+		vector1 = [az, daa, 0.0]
+		FaultAA.append( EndLocation( FaultAA[icol-1],vector1 ) )
+	    FaultGeom.append( FaultAA ) 
+	
+	return FaultGeom   # should have shape like: (Nrow,Ncol,3)B
+
+    else: 
+	# multiple segments 
+	azs = []; hDs = []; vDs = []      # or strikes
+	AveStrike = 0
+	for iseg in xrange( Nsegs ): 
+	    loc1 = np.array(FaultTrace[iseg])
+	    loc2 = np.array(FaultTrace[iseg+1])
+	    a,hD0,vD0,az = LonLatToAngleDistance( loc1, loc2, CalcRadius=False, CalcAzimuth=True, CalcDist=True )
+	    
+	    az = (az+2*np.pi)%(2*np.pi)
+	    hDs.append( hD0 )
+	    AveStrike += az 
+	    azs.append( az )
+	
+	AveStrike /= Nsegs    # average strike used by Stirling fault extension 
+	
+	# extension if given grid space 
+	if GridSpaceAlongStrike and GridSpaceDownDip: 
+	    daa = GridSpaceAlongStrike
+	    ddd = GridSpaceDownDip 
+	elif GridSpaceAlongStrike and not GridSpaceDownDip: 
+	    daa = ddd = GridSpaceAlongStrike
+	elif not GridSpaceAlongStrike and GridSpaceDownDip: 
+	    daa = ddd = GridSpaceDownDip
+	else: 
+	    # no grid generation (just get four corner points)
+	    FaultTraceSeg = []
+	    for iseg in xrange( Nsegs ): 
+		loc1 = FaultTrace[iseg]
+		loc2 = FaultTrace[iseg+1]
+		vector = [AveStrike+np.pi/2.,hD,vD]
+		loc3 = EndLocation( loc2, vector ) 
+		loc4 = EndLocation( loc1, vector ) 
+		FaultTraceSeg.append( [loc1,loc2,loc3,loc4] )
+	    FaultTrace1 = []
+	    for ipoint in xrange( Npoints ): 
+		loc0 = FaultTrace[ipoint] 
+		vector = [AveStrike+np.pi/2.,hD,vD]
+		loc00 = EndLocation( loc0, vector )
+		FaultTrace1.append(loc00) 
+	    FaultTrace1.reverse()
+	    FaultTrace = FaultTrace + FaultTrace1
+	    return FaultTrace, FaultTraceSeg
+
+        # loop over segments 
+	Nrow = int(vD/np.sin(AveDip)/ddd + 1)
+	Ncol = []
+	for iseg in xrange( Nsegs ): 
+	    Ncol.append(int(hDs[iseg] / daa+1)) 
+	for irow in xrange( Nrow ): 
+	    vector0 = [AveStrike+np.pi/2, ddd*np.cos(AveDip), ddd*np.sin(AveDip)]
+	    if irow == 0: 
+		FaultDD = FaultTrace[0] 
+	    else: 
+		FaultDD = EndLocation( FaultDD, vector0 ) 
+	    FaultAA = [FaultDD,]
+	    icount = 0
+	    for iseg in xrange( Nsegs ):
+		for icol in xrange( 1, Ncol[iseg] ):
+		    vector1 = [azs[iseg], daa, 0.0]
+		    loc0 = EndLocation( FaultAA[icount], vector1 ) 
+		    FaultAA.append( loc0 )
+		    icount += 1
+	    FaultGeom.append( FaultAA ) 
+
+	return FaultGeom   # should have shape like: (Nrow,Ncol,3)
+
+	
 
 def srfFaultSurfaceExtract(SRFfile): 
     """ 
@@ -1165,6 +1467,7 @@ def srfFaultSurfaceExtract(SRFfile):
 
 
 
+
 def srfFaultSurfaceTest(SRFfile): 
     """ 
     test function srfFaultSurfaceExtract
@@ -1198,7 +1501,109 @@ def srfFaultSurfaceTest(SRFfile):
 
 
 
+
+def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True): 
+    """
+    Compute Rjb,Rrup,Rx for simple fault plane
+    """ 
+    Npoints = len(FaultTrace1)
+    if GridSpaceAlongStrike == None and GridSpaceDownDip == None: 
+	# generate fault trace and down-dip extension
+	FaultTrace, FaultSeg = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip)
+
+	# Rjb: points to line (or seg)  (quite good!)
+	verts = FaultTrace
+	vertsClosed = FaultTrace + [FaultTrace[0]]
+	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=True )
+	check = CheckPointInPolygon( SiteGeom, verts )
+	if check: 
+	    Rjb = 0.0
+	else:
+	    Rjb = minRjb 
+	
+	# Rrup: point to surface (like Rjb, but to fault surface)
+	Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm ) 
+
+	# Rx: points to line (consider the sign, relative to the strike)
+	trace = FaultTrace1
+	ps = trace[0]
+	pe = trace[1]
+	
+	Radius, hD, vD, Azimuth1to2 = LonLatToAngleDistance(ps, pe, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
+	vector = [Azimuth1to2, hD, vD]
+	
+	# define the extended fault traces (to project faults surface projections on!)
+	vector[1] = 1000  # km 
+	vector[2] = 0
+	
+	Loc1 = EndLocation( ps, vector ) 
+	vector[0] = Azimuth1to2 + np.pi   # flip over trace dir 
+	Loc2 = EndLocation( pe, vector ) 
+
+	# this step is key to identify the hanging wall effect
+	vector[0] = Azimuth1to2 + np.pi/2.   # downdip to get the other two points (last row fault trace)
+	
+	Loc3 = EndLocation( Loc1, vector ) 
+	Loc4 = EndLocation( Loc2, vector ) 
+
+	# now  Loc1, Loc2, Loc3, Loc4 give the extended fault surface projection (1000*1000 area)
+	# this defines a polygon on the spherical surface and you need to check the site location
+	# inside or outside the polygon to compute Rx
+	verts = []; segs = []
+	verts.append(Loc1) 
+	segs.append(Loc1) 
+	for iseg in xrange( Npoints ): 
+	    verts.append( FaultTrace1[Npoints-1-iseg] ) 
+	    segs.append( FaultTrace1[Npoints-1-iseg] ) 
+	verts.append( Loc2 ) 
+	segs.append( Loc2 ) 
+	
+	verts.append( Loc4 ) 
+	verts.append( Loc3 ) 
+	
+	# check site is inside the polygon 
+	check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
+
+	# compute site to fault trace min distance  
+	distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast)
+        if check or distToExtendedTrace == 0.0: 
+	    Rx = distToExtendedTrace 
+	else: 
+	    Rx = -distToExtendedTrace 
+
+	if 0: 
+	    # test plot
+	    from mpl_toolkits.mplot3d import Axes3D 
+	    FaultTrace = np.array( FaultTrace )
+	    fig = plt.figure(1) 
+	    ax = Axes3D(fig) 
+	    verts1 = np.array( vertsClosed )
+	    ax.plot( verts1[:,0], verts1[:,1], -verts1[:,2], 'b-' )
+	    ax.plot( FaultTrace[:,0], FaultTrace[:,1], FaultTrace[:,2]*0.0, 'bo' )
+	    ax.plot( [SiteGeom[0]], [SiteGeom[1]], [0.0], 'r^' )
+	    plt.show()
+	
+	return Rjb, Rrup, Rx 
+    
+    else: 
+	FaultGeom = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=GridSpaceAlongStrike, GridSpaceDownDip=GridSpaceDownDip)
+	FaultGeom = np.array( FaultGeom ) 
+	Nrow, Ncol, Nelm =  FaultGeom.shape 
+
+	Rjb, Rrup, Rx = DistanceToEvenlyGriddedSurface( SiteGeom, FaultGeom, Fast=Fast )
+
+	if 0: 
+	    Fault = FaultGeom.reshape((Nrow*Ncol,3))
+	    fig = plt.figure(2) 
+	    ax = Axes3D(fig) 
+	    ax.plot( Fault[:,0], Fault[:,1], -Fault[:,2], 'b.' ) 
+	    ax.plot( Fault[:,0], Fault[:,1], Fault[:,2]*0.0, 'ko' ) 
+	    plt.show() 
+	return Rjb, Rrup, Rx 
+
+
 # General distance calculation (before this, you need to generate FaultGeo)
+# only requirement is the fault geometry (explicitly)
 def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
     """
     Compute Rjb, Rrup, Rx explicitly given discretized fault (3D) surface geometry and site location (in lon/lat)
@@ -1325,22 +1730,13 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
 	ax = fig.add_subplot( 111 ) 
 	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
 	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
-	raw_input() 
-    if 0: 
-	print 'Surface projection verts: '
-	print verts
-	print 'Fault trace segments: '
-	print segs 
-	print 'Fault geometry: '
-	print FaultGeo
-	print 'Site location:' 
-	print SiteGeo
+	#raw_input() 
     
     # check site is inside the polygon 
     check = CheckPointInPolygon( SiteGeo[:2], np.array(verts)[:,:2] )
 
     # compute site to fault trace min distance  
-    distToExtendedTrace = minDistToLineSeg(SiteGeo, segs, Fast=Fast)
+    distToExtendedTrace = minDistToLineSeg2D(SiteGeo, segs, Fast=Fast)
 
     if check or distToExtendedTrace == 0.0: 
 	Rx = distToExtendedTrace   # hanging wall
@@ -1348,6 +1744,7 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
 	Rx = - distToExtendedTrace   # foot wall 
 
     return Rjb, Rrup, Rx 
+
 
 
 
@@ -1462,10 +1859,38 @@ def GetIntraInterResiduals(residualT, EQID, sigmaT, tau, sigma, AS=None):
 
 if __name__ == '__main__': 
     
-    # Test srfFaultSurfaceExtract
-    FilePath ='./Validation/DistancesTestFiles/inputs/158_0' 
-    FileName = '158_0.txt.variation-s0000-h0000'  
-    SRFfile = os.path.join( FilePath, FileName ) 
-    srfFaultSurfaceTest(SRFfile) 
-
-
+    if 0:
+	# Test srfFaultSurfaceExtract
+	FilePath ='./Validation/DistancesTestFiles/inputs/158_0' 
+	FileName = '158_0.txt.variation-s0000-h0000'  
+	SRFfile = os.path.join( FilePath, FileName ) 
+	srfFaultSurfaceTest(SRFfile) 
+    
+    if 0:
+	point0 = [1,1,1]
+	points = [[0,0,1],[0,1,0],[-1.0,0.5,0.5]] 
+	dist, point1 = ptToSurf3D( point0, points ) 
+	print dist, point1 
+    if 0: 
+	point0 = [0.5,0.5,1] 
+	point0 = [0,2,1]
+	point1 = [0,0,0]
+	point2 = [0,1,0]
+	dist = ptToLineSeg3D(point0, point1, point2)
+	print dist 
+    if 1: 
+	point0 = [-118.286, 34.0192,0.0]
+	point1 = [-118.23476100000001, 34.067455000000002, -3.0] 
+	point2 = [-118.29677, 34.112583000000001, -3.0]
+	dist_tmp,Ploc = ptToLineSeg3D(point0, point1, point2,Rscale=111.12)
+	a, hD, vD, az = LonLatToAngleDistance(point0,Ploc,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
+	dist = np.sqrt(hD**2+vD**2)
+	print dist, Ploc 
+	
+    if 0: 
+	point0 = [-117.8,33.5,0.0] 
+	point1 = [-118.0,33,3.0]
+	point2 = [-118.0,34,3.0]
+	point3 = [-117.5,33,15.0]
+	dist = ptToSurf3D(point0, point1, point2, point3)
+	print dist 
