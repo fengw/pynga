@@ -649,9 +649,7 @@ def calc_Rrup( Rx, Ztor, W, dip, azimuth, Rjb=None ):
     return Rrup
 
 
-# Simplified fault geometry (one trace) (all of these geometrical relations satisfy in this simple case)
-# so as the above two functions (simple fault geometry)
-# For Fling study and BBP (simple *.src)
+# One option of doing Fling and BBP distance calculation
 def calc_distances(SiteGeo, Dims, Mech, ProjDict, Rrup=False, Rx=False):
     """
     Compute Rjb, Rrup, Rx implicitly given fault geometry and site location (in lon/lat)
@@ -1278,15 +1276,46 @@ def minDistToSurfSeg( loc, segs, Rscale=1.0 ):
 
 
 
+def FaultTraceGen(Origin, Dims, Mech):
+    """
+    Generate top FaultTrace and required parameter for function SimpleFaultSurface 
+    """
+    # Fault dimension and focal mechanism 
+    lon0, lat0 = Origin   # top center lon/lat along the strike with depth ztor 
+    Fl,dfl,Fw,dfw,ztor = Dims   # fault length along strike, fault width down dip 
+    strike, dip, rake = Mech   # fault mechanism 
+    
+    # extend to get fault surface 
+    loc = lon0, lat0, ztor 
+    hD = Fl/2. 
+    vD = 0.0 
+    strike *= np.pi/180.   # strike is within 0,2pi
+    dipRad = dip * np.pi/180.   # strike is within 0,2pi
 
-# surface extension
+    # along strike extension
+    vector = [strike, hD, vD]
+    loc2 = EndLocation( loc, vector )  
+    vector = [strike+np.pi, hD*2, vD]
+    loc1 = EndLocation( loc2, vector ) 
+    FaultTrace1 = [loc1, loc2]
+
+    AveDip = dip  # in degree 
+    UpperSeisDepth = ztor 
+    LowerSeisDepth = Fw * np.sin( dipRad ) + ztor   
+    GridSpaceAlongStrike = dfl 
+    GridSpaceDownDip = dfw
+    
+    return FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike, GridSpaceDownDip
+
+
+# Surface extension (given FaultModel Dict)
 def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None):
     """
     Extend fault surface based on 
 	a.UCERF-type fault model (fault trace, upper seis depth, lower seis depth, and average dip) 
 	b.BBP-type (including Fling)
     Using Stirling method (downdip extension perpendicular to the average strike when dealing with 
-    multiple segments
+    this could deal with multiple segments
     """ 
     
     AveDip = AveDip * np.pi / 180. # To Radius 
@@ -1318,12 +1347,12 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	    FaultTrace1 = []    # downdip extension points 
 	    vector = [az+np.pi/2,hD,vD]    # downdip extension 
 	    
-	    loc0 = loc2
-	    loc00 = EndLocation( loc0, vector ) 
-	    FaultTrace2.append( loc00 )
+	    loc00 = EndLocation( loc2, vector ) 
+	    FaultTrace1.append( loc00 )
 	    
-	    loc0 = loc1
-	    loc00 = EndLocation( loc0, vector ) 
+	    loc00 = EndLocation( loc1, vector ) 
+	    FaultTrace1.append( loc00 )
+	    
 	    FaultTrace1.reverse()
 	    FaultTrace = FaultTrace + FaultTrace1
             FaultTraceSeg = [FaultTrace,]
@@ -1419,7 +1448,7 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 def srfFaultSurfaceExtract(SRFfile): 
     """ 
     Generate fault surface from SRF file convention 
-    Following the Graves' SRF convention
+    Following the Graves' SRF convention used in BBP and CyberShake
     """ 
 
     lines = open( SRFfile, 'r' ).readlines()
@@ -1478,7 +1507,6 @@ def srfFaultSurfaceExtract(SRFfile):
     srfFaultSurface['rakes'] = rakes 
 
     return srfFaultSurface 
-
 
 
 
@@ -1573,15 +1601,17 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
     return Rx
 
 
-def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True): 
+
+def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True): 
     """
     Compute Rjb,Rrup,Rx for simple fault plane
+    FaultTrace1 is just the top fault trace 
     """ 
+    
     Npoints = len(FaultTrace1)
     if GridSpaceAlongStrike == None and GridSpaceDownDip == None: 
-	# generate fault trace and down-dip extension
 	FaultTrace, FaultSeg, AveStrike = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip)
-
+        
 	# Rjb: points to line (or seg)  (quite good!)
 	verts = FaultTrace
 	vertsClosed = FaultTrace + [FaultTrace[0]]
@@ -1627,6 +1657,7 @@ def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeis
 	    ax.plot( Fault[:,0], Fault[:,1], Fault[:,2]*0.0, 'ko' ) 
 	    plt.show() 
 	return Rjb, Rrup, Rx 
+
 
 
 # General distance calculation (before this, you need to generate FaultGeo)

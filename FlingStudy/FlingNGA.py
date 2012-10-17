@@ -16,6 +16,8 @@ sid = sys.argv[1]   # Scenario ID (140,141,142)
 vid = sys.argv[2]   # fault id (hypocenters)
 opt = sys.argv[3]   # ComputeDist, ComputePSA, PlotPSA
 
+dflag = sys.argv[4]  # proj or extend
+
 # paths
 wkd = os.getcwd() 
 
@@ -88,7 +90,7 @@ for f in [metapth0, metapth1, metapth2,\
 	  plotpth0, plotpth1, plotpth2, ]:
     if not os.path.exists( f ):
 	os.mkdir( f )
-metafileD = metapth2 + 'Distance.Scenario%s.v%s.py'%(sid,vid) 
+metafileD = metapth2 + 'Distance.Scenario%s.v%s_%s.py'%(sid,vid,dflag) 
 metafilePSA = metapth2 + 'PSA.Scenario%s.v%s.py'%(sid,vid) 
 
 NGA_models = ['CB','BA','CY','AS']
@@ -102,26 +104,47 @@ if opt == 'ComputeDist':
     Dims = Fl, dfl, Fw, dfw, ztor
     Mech = strike, dip, rake
     HypoLoc = hypoAS, hypoDD
-
-    # projection property
-    zone = 10
-    rot = strike
     origin = lon0, lat0
-    inverse = True  # from xy to ll
-    ProjDict = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}
 
-    VisualDict={'SiteLoc':(rlon,rlat),'savetype':'pdf','plotpth':plotpth20} 
-    VisualDict=None
+    if dflag == 'proj': 
+	# projection property
+	zone = 10
+	rot = strike
+	inverse = True  # from xy to ll
+	ProjDict = {'zone':zone,'origin':origin,'rot':rot,'inverse':inverse}
+	VisualDict={'SiteLoc':(rlon,rlat),'savetype':'pdf','plotpth':plotpth20} 
+	VisualDict=None
+	from FlingUtils import *
+	FaultGeom = FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict,VisualDict=VisualDict) 
+	SiteGeo = rlon, rlat   # all site Geometry
+	start_time = HourMinSecToSec(BlockName=opt)
+	DistDict = calc_distances( SiteGeo, Dims, Mech, ProjDict, Rrup=True, Rx=True )
+	end_time = HourMinSecToSec()
+	SecToHourMinSec( end_time-start_time,BlockName=opt )
+   
+    else: 
+	start_time = HourMinSecToSec(BlockName=opt)
+	
+	FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike, GridSpaceDownDip = FaultTraceGen( origin, Dims, Mech ) 
+	FaultGeom = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=GridSpaceAlongStrike, GridSpaceDownDip=GridSpaceDownDip ) 
 
-    from FlingUtils import *
-    FaultGeom = FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict,VisualDict=VisualDict) 
-    
-    SiteGeo = rlon, rlat   # all site Geometry
+	DistDict = {}
+	for key in ['Rjb','Rrup','Rx']: 
+	    DistDict[key] = []
 
-    start_time = HourMinSecToSec(BlockName=opt)
-    DistDict = calc_distances( SiteGeo, Dims, Mech, ProjDict, Rrup=True, Rx=True )
-    end_time = HourMinSecToSec()
-    SecToHourMinSec( end_time-start_time,BlockName=opt )
+	Rjb = []; Rrup = []; Rx =[]
+	for isite in xrange( len(rlon) ): 
+	    SiteGeom = [rlon[isite], rlat[isite], 0.0]
+	    Rjb0, Rrup0, Rx0 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1,UpperSeisDepth,LowerSeisDepth,AveDip)
+	    DistDict['Rjb'].append(Rjb0) 
+	    DistDict['Rrup'].append(Rrup0) 
+	    DistDict['Rx'].append(Rx0) 
+	# need to check Rjb in DistanceToSimpleFaultSurface for Fling Study
+	# ...
+
+	end_time = HourMinSecToSec()
+	SecToHourMinSec( end_time-start_time,BlockName=opt )
+
 
     meta = dict( 
 	    distance=DistDict, 
@@ -136,25 +159,49 @@ if opt == 'PlotDist':
     Rx = meta1.distance['Rx']
     Rrup = meta1.distance['Rrup']
     Rjb = meta1.distance['Rjb']
-    azimuth = meta1.distance['azimuth'] 
     
-    slon2dS, slat2dS = meta1.FaultGeom['FaultSurface'] 
-    slon2dS = np.array(slon2dS) 
-    slat2dS = np.array(slat2dS) 
+    if dflag == 'proj':
+	azimuth = meta1.distance['azimuth'] 
+	slon2dS, slat2dS = meta1.FaultGeom['FaultSurface'] 
+	slon2dS = np.array(slon2dS) 
+	slat2dS = np.array(slat2dS) 
+	fig = plt.figure(1) 
+	i = 1
+	tls = ['azimuth','Rjb','Rrup','Rx']
+	for f in [azimuth, Rjb, Rrup, Rx]:
+	    f = np.array(f) 
+	    ax = fig.add_subplot( 2,2,i )
+	    img = ax.scatter(rlon,rlat,c=f,s=2*abs(f),edgecolor='w')
+	    fig.colorbar(img)
+	    ax.plot( [slon2dS[0,0], slon2dS[0,-1],slon2dS[0,-1], slon2dS[0,0], slon2dS[0,0]], \
+		     [slat2dS[0,0], slat2dS[0,0],slat2dS[-1,0], slat2dS[-1,0], slat2dS[0,0]],'k' )
+	    ax.set_title( tls[i-1] )
+	    i = i + 1
+	fig.savefig( plotpth + 'DistanceAzimuthScatter%s.pdf'%dflag, format='pdf' )   
+    
+    else: 
 
-    fig = plt.figure(1) 
-    i = 1
-    tls = ['azimuth','Rjb','Rrup','Rx']
-    for f in [azimuth, Rjb, Rrup, Rx]:
-	f = np.array(f) 
-	ax = fig.add_subplot( 2,2,i )
-	img = ax.scatter(rlon,rlat,c=f,s=2*abs(f),edgecolor='w')
-	fig.colorbar(img)
-	ax.plot( [slon2dS[0,0], slon2dS[0,-1],slon2dS[0,-1], slon2dS[0,0], slon2dS[0,0]], \
-		 [slat2dS[0,0], slat2dS[0,0],slat2dS[-1,0], slat2dS[-1,0], slat2dS[0,0]],'k' )
-	ax.set_title( tls[i-1] )
-	i = i + 1
-    fig.savefig( plotpth + 'DistanceAzimuthScatter.pdf', format='pdf' )   
+	F = np.array( meta1.FaultGeom )
+	fig = plt.figure(1) 
+	i = 1
+	ax = fig.add_subplot( 2,2,1 )
+	ax.plot( rlon, rlat, 'k^' ) 
+	ax.plot( lon0, lat0, 'yo' )
+	ax.plot( [F[0,0,0],F[0,-1,0],F[-1,-1,0],F[-1,0,0],F[0,0,0]],\
+		 [F[0,0,1],F[0,-1,1],F[-1,-1,1],F[-1,0,1],F[0,0,1]],'b')
+	ax.set_title( 'FaultSurface and Sites' )
+	tls = ['Rjb','Rrup','Rx']
+	for f in [Rjb, Rrup, Rx]:
+	    f = np.array(f) 
+	    ax = fig.add_subplot( 2,2,i+1 )
+	    ax.plot( [F[0,0,0],F[0,-1,0],F[-1,-1,0],F[-1,0,0],F[0,0,0]],\
+		     [F[0,0,1],F[0,-1,1],F[-1,-1,1],F[-1,0,1],F[0,0,1]],'k')
+	    img = ax.scatter(rlon,rlat,c=f,s=2*abs(f),edgecolor='w')
+	    fig.colorbar(img)
+	    ax.set_title( tls[i-1] )
+	    i = i + 1
+	fig.savefig( plotpth + 'DistanceAzimuthScatter%s.pdf'%dflag, format='pdf' )   
+
 
 
 if opt=='ComputePSA':
