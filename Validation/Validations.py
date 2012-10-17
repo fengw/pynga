@@ -65,16 +65,14 @@ else:
 	    sites[sitename] = [float(spl[1]),float(spl[2]),0.0] 
 
         if SingleTest: 
-	    SelectSourceName = 'Elysian Park (Upper)'
 	    SelectSourceName = 'Raymond'
-	    SelectSourceName = 'Santa Monica, alt 1'
 	    SelectSourceName = 'Northridge'
-	    SelectSourceName = 'Channel Islands Thrust'
-        else: 
-	    Rjberr = []
-	    Rruperr = []
-	    Rxerr = []
-	    FaultLoc = []
+	    SelectSourceName = 'Oak Ridge (Onshore)'
+
+	Rjberr = []
+	Rruperr = []
+	Rxerr = []
+	FaultLoc = []
 
         # read from OpenSHA output
 	SiteGeom = sites[SiteName]
@@ -119,17 +117,26 @@ else:
 			LowerSeisDepth = UCERF2_DM[Name]['AveLowerSeisDepth']
 			AveDip = UCERF2_DM[Name]['AveDip']
 			FaultTrace1 = UCERF2_DM[Name]['FaultTrace']
+			
+			Fault = np.array( FaultTrace1 )
+			ax.plot( Fault[:,0], Fault[:,1] )
+			ax.hold(True)
 
 			daa = None; ddd = None 
-			Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+			Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True,Debug=SingleTest)
 			print 'Distance Calculation in pynga (simple Fault Surface): '
 			print Rjb2, Rrup2, Rx2 
 
 			# evenlygrided surface
-			daa = ddd = 1.0
-			Rjb3, Rrup3, Rx3 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
-			print 'Discretized Fault Surface Distance: '
-			print Rjb3,Rrup3,Rx3
+			#daa = ddd = 1.0
+			#Rjb3, Rrup3, Rx3 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+			#print 'Discretized Fault Surface Distance: '
+			#print Rjb3,Rrup3,Rx3
+			
+			Rjberr.append( Rjb2-Rjb0 )
+			Rruperr.append( Rrup2-Rrup0 )
+			Rxerr.append( Rx2-Rx0 )
+			FaultLoc.append( [Fault[0,0],Fault[0,1]] )  # use the fault trace starting point to locate the distance scatters 
 		
 		if not SingleTest:
 		    # run all
@@ -149,13 +156,14 @@ else:
 		    Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
 		    print 'Distance Calculation in pynga (simple Fault Surface): '
 		    print Rjb2, Rrup2, Rx2 
+		    
 		    Rjberr.append( Rjb2-Rjb0 )
 		    Rruperr.append( Rrup2-Rrup0 )
 		    Rxerr.append( Rx2-Rx0 )
 		    FaultLoc.append( [Fault[0,0],Fault[0,1]] )  # use the fault trace starting point to locate the distance scatters 
 
-        FaultLoc = np.array( FaultLoc ) 
-        lons = FaultLoc[:,0]
+	FaultLoc = np.array( FaultLoc ) 
+	lons = FaultLoc[:,0]
 	lats = FaultLoc[:,1]
 
 	ax = fig.add_subplot( 2,2,2 ) 

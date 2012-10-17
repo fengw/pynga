@@ -74,7 +74,7 @@ def FaultGeom(IDs, Dims, Mech, HypoLoc, ProjDict, VisualDict=None):
 	fig.savefig( plotpth + plotn, format=savetype )
         
 	# 2. plot in 3D
-	fig = plt.figure(2) /
+	fig = plt.figure(2) 
 	ax = Axes3D(fig) 
 	
 	ax.plot( rlon, rlat, np.zeros(len(rlon)), 'k^', ms=8 )

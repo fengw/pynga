@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-test source station profile
-visually show all information
+FlingStudy to test the application of pynga
+FlingStudy Fault trace model is similar to BBP *.src file 
 """
 # required modules
 import os, sys, glob
@@ -135,12 +135,13 @@ if opt == 'ComputeDist':
 	Rjb = []; Rrup = []; Rx =[]
 	for isite in xrange( len(rlon) ): 
 	    SiteGeom = [rlon[isite], rlat[isite], 0.0]
+	    # simple calculation  (short time)
 	    Rjb0, Rrup0, Rx0 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1,UpperSeisDepth,LowerSeisDepth,AveDip)
+	    # discretized calculation (very long time)
+	    #Rjb0, Rrup0, Rx0 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1,UpperSeisDepth,LowerSeisDepth,AveDip,GridSpaceAlongStrike=GridSpaceAlongStrike,GridSpaceDownDip=GridSpaceDownDip)
 	    DistDict['Rjb'].append(Rjb0) 
 	    DistDict['Rrup'].append(Rrup0) 
 	    DistDict['Rx'].append(Rx0) 
-	# need to check Rjb in DistanceToSimpleFaultSurface for Fling Study
-	# ...
 
 	end_time = HourMinSecToSec()
 	SecToHourMinSec( end_time-start_time,BlockName=opt )

@@ -1042,6 +1042,7 @@ def ptToLineSeg2D(x1,y1,x2,y2,px,py):
     dotprod = ( px * x2 + py * y2  ) 
     if dotprod <= 0.0: 
 	# (px,py) is on the side of (x1,y1) (projection of the point (px,py) is not on the segment)
+	print 'beyond point1'
 	projLenSq = 0.0 
     else:
 	# check the other side relationship
@@ -1049,6 +1050,7 @@ def ptToLineSeg2D(x1,y1,x2,y2,px,py):
 	py = y2-py 
         dotprod = px*x2 + py*y2 
 	if dotprod <= 0.0: 
+	    print 'beyond point2'
 	    # (px,py) is on the side of (x2,y2) (projection of the point (px,py) is not on the segment)
 	    projLenSq = 0.0 
 	else: 
@@ -1119,17 +1121,22 @@ def distToLineSeg2D( loc1,loc2,loc3, Fast=False ):
 	    return abs(xtd) * R   
 
 # segments
-def minDistToLineSeg2D( loc, segs, Fast=False ): 
+def minDistToLineSeg2D( loc, segs, Fast=False, Debug=False ): 
     """
     Compute minimum distance between loc and a line made of segments
     Segments in line are contrained by two points loc1, loc2
     """
     Npoints = len(segs) 
     minDist = 1000.
+    if Debug: 
+	print 'minDistToLineSeg2D Debug'
     for iseg in range(1,Npoints): 
 	p1 = segs[iseg-1] 
 	p2 = segs[iseg]
 	dist = abs( distToLineSeg2D(p1,p2,loc,Fast=Fast) ) 
+	if Debug: 
+	    print 'LineSeg %s'%iseg, dist 
+	
 	if dist <= minDist: 
 	    minDist = dist 
     return minDist  
@@ -1138,7 +1145,7 @@ def minDistToLineSeg2D( loc, segs, Fast=False ):
 
 
 # Used by Rrup based on just corner points
-def ptToLineSeg3D(point, point1, point2,Rscale=1.0):
+def ptToLineSeg3D(point, point1, point2, Rscale=1.0):
     """
     get your coordinate as float number
     default is in Cartesian 
@@ -1152,7 +1159,7 @@ def ptToLineSeg3D(point, point1, point2,Rscale=1.0):
     p2 = points[2,:]
     v = p2 - p1
     w0 = p0 - p1
-    w1 = p0 - p1
+    w1 = p0 - p2
     dotprod = sum(w0*v) 
     if dotprod <= 0: 
 	#print 'beyond point1'
@@ -1166,7 +1173,7 @@ def ptToLineSeg3D(point, point1, point2,Rscale=1.0):
     else: 
 	dotprod = sum(w1*v) 
 	if dotprod >= 0: 
-	 #   print 'beyond point2'
+	    #print 'beyond point2'
 	    Ploc = p2
 	    if Rscale != 1.0: 
 		a, hD, vD, az = LonLatToAngleDistance(Ploc,p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
@@ -1193,22 +1200,28 @@ def ptToLineSeg3D(point, point1, point2,Rscale=1.0):
     return dist, Ploc
 
 
-def minDistToLineSeg3D( loc, segs, Rscale=1.0 ):
+def minDistToLineSeg3D( loc, segs, Rscale=1.0, Debug=False ):
     """
     Compute minimum distance between loc and a line made of segments
     Segments in line are contrained by two points loc1, loc2
     """
     Npoints = len(segs) 
     minDist = 1000.
+    if Debug: 
+	print 'minDistToLineSeg3D Debug'
+
     for iseg in range(1,Npoints): 
 	p1 = segs[iseg-1] 
 	p2 = segs[iseg]
 	dist_tmp, Ploc = ptToLineSeg3D(loc,p1,p2,Rscale=Rscale) 
 	a, hD, vD, az = LonLatToAngleDistance(loc,Ploc,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
 	dist = np.sqrt( hD**2+vD**2 )
+	if Debug:
+	    print 'Line %s of %s:'%(iseg,Npoints), Ploc, hD, vD
 	if dist <= minDist: 
 	    minDist = dist 
     return minDist  
+
 
 
 def ptToSurf3D(point0,point1,point2,point3):
@@ -1250,13 +1263,15 @@ def ptToSurf3D(point0,point1,point2,point3):
     return dist, point1
 
 
-def minDistToSurfSeg( loc, segs, Rscale=1.0 ):
+def minDistToSurfSeg( loc, segs, Rscale=1.0, Debug=False ):
     """
     Compute minimum distance between loc and a line made of segments
     Segments in line are contrained by two points loc1, loc2
     """
     Nseg = len(segs) 
     minDist = 1000.
+    if Debug: 
+	print 'minDistToSurfSeg Debug'
     for iseg in range(Nseg):
 	points = segs[iseg]  # there are fout points
 	point1, point2, point3, point4 = points
@@ -1270,7 +1285,9 @@ def minDistToSurfSeg( loc, segs, Rscale=1.0 ):
 	    dist = minDistToLineSeg3D(loc, pointsClosed, Rscale=Rscale )
 	if dist <= minDist: 
 	    minDist = dist 
-#	print 'Segment %s: '%iseg, minDist
+	
+	if Debug:
+	    print 'Segment %s: '%iseg, minDist, check, Ppoint
 
     return minDist  
 
@@ -1304,7 +1321,7 @@ def FaultTraceGen(Origin, Dims, Mech):
     LowerSeisDepth = Fw * np.sin( dipRad ) + ztor   
     GridSpaceAlongStrike = dfl 
     GridSpaceDownDip = dfw
-    
+
     return FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike, GridSpaceDownDip
 
 
@@ -1347,15 +1364,15 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	    FaultTrace1 = []    # downdip extension points 
 	    vector = [az+np.pi/2,hD,vD]    # downdip extension 
 	    
-	    loc00 = EndLocation( loc2, vector ) 
+	    loc00 = EndLocation( loc1, vector ) 
 	    FaultTrace1.append( loc00 )
 	    
-	    loc00 = EndLocation( loc1, vector ) 
+	    loc00 = EndLocation( loc2, vector ) 
 	    FaultTrace1.append( loc00 )
 	    
 	    FaultTrace1.reverse()
 	    FaultTrace = FaultTrace + FaultTrace1
-            FaultTraceSeg = [FaultTrace,]
+	    FaultTraceSeg = [FaultTrace,]
 	    return FaultTrace, FaultTraceSeg, AveStrike
 
 	# Extended fault surface grid
@@ -1543,7 +1560,7 @@ def srfFaultSurfaceTest(SRFfile):
 
 
 
-def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
+def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
     """
     Compute Rx by extending the fault trace to infinity in both ends 
     """ 
@@ -1582,7 +1599,7 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
     verts.append( Loc4 ) 
     verts.append( Loc3 ) 
     
-    if 0:
+    if Debug:
     # Test extended fault trace and fault surface projection (plot) 
 	verts1 = np.array( verts ) 
 	fig = plt.figure(10) 
@@ -1590,10 +1607,9 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
 	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
 	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
 	ax.plot( SiteGeom[0], SiteGeom[1], 'rs' )
-	plt.show() 
     
     check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
-    distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast)
+    distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast, Debug=Debug)
     if check or distToExtendedTrace == 0.0:
 	Rx = distToExtendedTrace 
     else: 
@@ -1602,7 +1618,7 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
 
 
 
-def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True): 
+def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True,Debug=False): 
     """
     Compute Rjb,Rrup,Rx for simple fault plane
     FaultTrace1 is just the top fault trace 
@@ -1615,20 +1631,22 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 	# Rjb: points to line (or seg)  (quite good!)
 	verts = FaultTrace
 	vertsClosed = FaultTrace + [FaultTrace[0]]
-	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=Fast )
+	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=Fast, Debug=Debug )
 	check = CheckPointInPolygon( SiteGeom, verts )
+	if Debug: 
+	    print 'Site is within surface projection: ',check
 	if check: 
 	    Rjb = 0.0
 	else:
 	    Rjb = minRjb 
 	
 	# Rrup: point to surface (like Rjb, but to fault surface)
-	Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm ) 
+	Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
 
 	# Rx: points to line (consider the sign, relative to the strike)
-	Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast )
+	Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast, Debug=Debug )
 
-	if 0: 
+	if Debug: 
 	    # test plot
 	    from mpl_toolkits.mplot3d import Axes3D 
 	    FaultTrace = np.array( FaultTrace )
@@ -1649,7 +1667,7 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 
 	Rjb, Rrup, Rx = DistanceToEvenlyGriddedSurface( SiteGeom, FaultGeom, Fast=Fast )
 
-	if 0: 
+	if Debug: 
 	    Fault = FaultGeom.reshape((Nrow*Ncol,3))
 	    fig = plt.figure(2) 
 	    ax = Axes3D(fig) 
@@ -1867,7 +1885,7 @@ if __name__ == '__main__':
 	SRFfile = os.path.join( FilePath, FileName ) 
 	srfFaultSurfaceTest(SRFfile) 
     
-    if 1: 
+    if 0: 
 	x1,y1 = 0,0
 	x2,y2 = 1,1
 	px,py = 1,0 
@@ -1880,13 +1898,13 @@ if __name__ == '__main__':
 	points = [[0,0,1],[0,1,0],[-1.0,0.5,0.5]] 
 	dist, point1 = ptToSurf3D( point0, points ) 
 	print dist, point1 
-    if 0: 
+    if 1: 
 	point0 = [0.5,0.5,1] 
 	point0 = [0,2,1]
 	point1 = [0,0,0]
 	point2 = [0,1,0]
-	dist = ptToLineSeg3D(point0, point1, point2)
-	print dist 
+	dist, Ploc = ptToLineSeg3D(point0, point1, point2)
+	print dist, Ploc
     if 0: 
 	point0 = [-118.286, 34.0192,0.0]
 	point1 = [-118.23476100000001, 34.067455000000002, -3.0] 
