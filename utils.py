@@ -922,25 +922,39 @@ def ptToLine2D(x1,y1,x2,y2,px,py):
     Compute the point (px,py) to line (x1,y1)=>(x2,y2) allowing infinitely-extending of the line 
     Not used
     """ 
-    
+    # get the projected point
+    p1 = np.array([x1,y1])
+    p2 = np.array([x2,y2])
+    p = np.array([px,py])
+    v = p2-p1
+    n = v/np.sqrt(sum(v*v))     # unit vector to show the line direction 
+    w10 = p1-p   
+    w10n = sum( w10*n ) * n
+    Ploc = w10 - w10n + p 
+   
+    #dist1 = np.sqrt( sum((p-Ploc)*(p-Ploc)) )   # should be the same as the below
+    #print dist1 
+
+    # compute distance
     # adjust vectors relative to point (x1,y1)
-    x2 -= x1
-    y2 -= y1 
-    px -= x1 
-    py -= y1 
+    x2 -= x1*1.0
+    y2 -= y1*1.0
+    px -= x1*1.0
+    py -= y1*1.0
 
     # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
-   # dotprod = ( px * x2 + py * y2  ) 
-    #projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
+    dotprod = ( px * x2 + py * y2  ) 
+    projLenSq = dotprod * dotprod / (x2*x2+y2*y2)  # length of the vector (x1,y1)=>projected point of (px,py) on the line
 
     # 2. subtraction to get the closet distance (length of the vector)
-  #  lenSq = px*px + py*py - projLenSq 
- #   if lenSq < 0: 
+    lenSq = px*px + py*py - projLenSq 
+    if lenSq < 0: 
 #	# (px,py) is in the line specified by (x1,y1) and (x2,y2)
-#	lenSq = 0 
+	lenSq = 0 
     
-    return ( (-x2*py-(-px)*y2) * 1.0 /np.sqrt(x2**2+y2**2) ) 
-    #return np.sqrt( lenSq )
+    dist = np.sqrt( lenSq )
+    #return ( (-x2*py-(-px)*y2) * 1.0 /np.sqrt(x2**2+y2**2) ) 
+    return dist, Ploc 
 
 
 # great circle distance (point to 2D line)
@@ -1004,7 +1018,6 @@ def minDistToLine2D( loc, segs, Fast=False ):
 	p2 = segs[iseg]
 	dist = distToLine2D(p1,p2,loc,Fast=Fast) 
 	dist0 = abs( dist ) 
-	print dist0
 	if dist0 <= minDist0: 
 	    minDist0 = dist0 
 	    minDist = dist
@@ -1020,11 +1033,12 @@ def ptToLineSeg2D(x1,y1,x2,y2,px,py):
     Distance measured is the distance between the specified point and the closest point between 
     the specified end points (x1,y1) and (x2,y2)
     """ 
+    
     # adjust vectors relative to point (x1,y1)
-    x2 -= x1
-    y2 -= y1 
-    px -= x1 
-    py -= y1 
+    x2 -= x1*1.0
+    y2 -= y1*1.0 
+    px -= x1*1.0 
+    py -= y1*1.0 
 
     # 1. projection using dot production of adjusted vector (px,py) and (x2,y2)
     dotprod = ( px * x2 + py * y2  ) 
@@ -1194,7 +1208,6 @@ def minDistToLineSeg3D( loc, segs, Rscale=1.0 ):
 	dist_tmp, Ploc = ptToLineSeg3D(loc,p1,p2,Rscale=Rscale) 
 	a, hD, vD, az = LonLatToAngleDistance(loc,Ploc,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
 	dist = np.sqrt( hD**2+vD**2 )
-	#print 'Line %s: '%iseg, dist
 	if dist <= minDist: 
 	    minDist = dist 
     return minDist  
@@ -1290,7 +1303,8 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	loc1 = FaultTrace[iseg] 
 	loc2 = FaultTrace[iseg+1]
 	a,hD0,vD0,az = LonLatToAngleDistance( loc1, loc2, CalcRadius=False, CalcAzimuth=True, CalcDist=True )
-        
+        AveStrike = az 
+
 	# extension if given grid space 
 	if GridSpaceAlongStrike and GridSpaceDownDip: 
 	    daa = GridSpaceAlongStrike
@@ -1313,7 +1327,7 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	    FaultTrace1.reverse()
 	    FaultTrace = FaultTrace + FaultTrace1
             FaultTraceSeg = [FaultTrace,]
-	    return FaultTrace, FaultTraceSeg
+	    return FaultTrace, FaultTraceSeg, AveStrike
 
 	# Extended fault surface grid
 	Ncol = int(hD0 / daa + 1)
@@ -1375,7 +1389,7 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 		FaultTrace1.append(loc00) 
 	    FaultTrace1.reverse()
 	    FaultTrace = FaultTrace + FaultTrace1
-	    return FaultTrace, FaultTraceSeg
+	    return FaultTrace, FaultTraceSeg, AveStrike
 
         # loop over segments 
 	Nrow = int(vD/np.sin(AveDip)/ddd + 1)
@@ -1501,6 +1515,63 @@ def srfFaultSurfaceTest(SRFfile):
 
 
 
+def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True ):
+    """
+    Compute Rx by extending the fault trace to infinity in both ends 
+    """ 
+    Npoints = len( FaultTrace1 ) 
+
+    ps = FaultTrace1[0]
+    pe = FaultTrace1[-1]
+    
+    if AveStrike == None:
+	Radius, hD, vD, Azimuth1to2 = LonLatToAngleDistance(ps, pe, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
+	dir = Azimuth1to2 
+    else:
+	dir = AveStrike
+    
+    vector = [dir, 1000.0, 0.0]    # horizontal extension vector
+    Loc2 = EndLocation( pe, vector ) 
+    
+    vector[0] = dir + np.pi   # flip over trace dir 
+    Loc1 = EndLocation( ps, vector ) 
+    
+    # down-dip extension
+    vector[0] = dir + np.pi/2.  
+    Loc3 = EndLocation( Loc1, vector ) 
+    Loc4 = EndLocation( Loc2, vector ) 
+
+    verts = []   # to form the polygon
+    segs = []    # to form the extend fault trace segments
+    verts.append(Loc1) 
+    segs.append(Loc1) 
+    for ipoint in xrange( Npoints ): 
+	verts.append( FaultTrace1[ipoint] ) 
+	segs.append( FaultTrace1[ipoint] )
+    verts.append( Loc2 ) 
+    segs.append( Loc2 ) 
+    
+    verts.append( Loc4 ) 
+    verts.append( Loc3 ) 
+    
+    if 0:
+    # Test extended fault trace and fault surface projection (plot) 
+	verts1 = np.array( verts ) 
+	fig = plt.figure(10) 
+	ax = fig.add_subplot( 111 ) 
+	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
+	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
+	ax.plot( SiteGeom[0], SiteGeom[1], 'rs' )
+	plt.show() 
+    
+    check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
+    distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast)
+    if check or distToExtendedTrace == 0.0:
+	Rx = distToExtendedTrace 
+    else: 
+	Rx = -distToExtendedTrace 
+    return Rx
+
 
 def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True): 
     """
@@ -1509,12 +1580,12 @@ def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeis
     Npoints = len(FaultTrace1)
     if GridSpaceAlongStrike == None and GridSpaceDownDip == None: 
 	# generate fault trace and down-dip extension
-	FaultTrace, FaultSeg = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip)
+	FaultTrace, FaultSeg, AveStrike = SimpleFaultSurface(FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip)
 
 	# Rjb: points to line (or seg)  (quite good!)
 	verts = FaultTrace
 	vertsClosed = FaultTrace + [FaultTrace[0]]
-	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=True )
+	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=Fast )
 	check = CheckPointInPolygon( SiteGeom, verts )
 	if check: 
 	    Rjb = 0.0
@@ -1525,53 +1596,9 @@ def DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth, LowerSeis
 	Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm ) 
 
 	# Rx: points to line (consider the sign, relative to the strike)
-	trace = FaultTrace1
-	ps = trace[0]
-	pe = trace[1]
-	
-	Radius, hD, vD, Azimuth1to2 = LonLatToAngleDistance(ps, pe, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
-	vector = [Azimuth1to2, hD, vD]
-	
-	# define the extended fault traces (to project faults surface projections on!)
-	vector[1] = 1000  # km 
-	vector[2] = 0
-	
-	Loc1 = EndLocation( ps, vector ) 
-	vector[0] = Azimuth1to2 + np.pi   # flip over trace dir 
-	Loc2 = EndLocation( pe, vector ) 
+	Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast )
 
-	# this step is key to identify the hanging wall effect
-	vector[0] = Azimuth1to2 + np.pi/2.   # downdip to get the other two points (last row fault trace)
-	
-	Loc3 = EndLocation( Loc1, vector ) 
-	Loc4 = EndLocation( Loc2, vector ) 
-
-	# now  Loc1, Loc2, Loc3, Loc4 give the extended fault surface projection (1000*1000 area)
-	# this defines a polygon on the spherical surface and you need to check the site location
-	# inside or outside the polygon to compute Rx
-	verts = []; segs = []
-	verts.append(Loc1) 
-	segs.append(Loc1) 
-	for iseg in xrange( Npoints ): 
-	    verts.append( FaultTrace1[Npoints-1-iseg] ) 
-	    segs.append( FaultTrace1[Npoints-1-iseg] ) 
-	verts.append( Loc2 ) 
-	segs.append( Loc2 ) 
-	
-	verts.append( Loc4 ) 
-	verts.append( Loc3 ) 
-	
-	# check site is inside the polygon 
-	check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
-
-	# compute site to fault trace min distance  
-	distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast)
-        if check or distToExtendedTrace == 0.0: 
-	    Rx = distToExtendedTrace 
-	else: 
-	    Rx = -distToExtendedTrace 
-
-	if 1: 
+	if 0: 
 	    # test plot
 	    from mpl_toolkits.mplot3d import Axes3D 
 	    FaultTrace = np.array( FaultTrace )
@@ -1686,66 +1713,9 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
     # compute Rx by extending fault trace and fault surface projection
     # ============
     FaultTrace = FaultGeo[0] # first row to get the fault trace for Rx calculation 
-    Ntrace = FaultTrace.shape[0]    # = Ncol 
-    ps = FaultTrace[0]
-    pe = FaultTrace[-1] 
-    
-    Radius, hD, vD, Azimuth1to2 = LonLatToAngleDistance(ps, pe, CalcRadius=False, CalcDist=True, Fast=Fast, CalcAzimuth=True, Azimuth0to2PI=True ) 
-    vector = [Azimuth1to2, hD, vD]
-    
-    # define the extended fault traces (to project faults surface projections on!)
-    vector[1] = 1000  # km 
-    vector[2] = 0
-    
-    # problem here !!!
-    Loc1 = EndLocation( ps, vector ) 
-    vector[0] = Azimuth1to2 + np.pi   # flip over trace dir 
-    Loc2 = EndLocation( pe, vector ) 
-
-    # this step is key to identify the hanging wall effect
-    vector[0] = Azimuth1to2 + np.pi/2.   # downdip to get the other two points (last row fault trace)
-    
-    Loc3 = EndLocation( Loc1, vector ) 
-    Loc4 = EndLocation( Loc2, vector ) 
-
-    # now  Loc1, Loc2, Loc3, Loc4 give the extended fault surface projection (1000*1000 area)
-    # this defines a polygon on the spherical surface and you need to check the site location
-    # inside or outside the polygon to compute Rx
-    verts = []; segs = []
-    verts.append(Loc1) 
-    segs.append(Loc1) 
-    for iseg in xrange( Ntrace ): 
-	verts.append( FaultTrace[Ntrace-1-iseg] ) 
-	segs.append( FaultTrace[Ntrace-1-iseg] ) 
-    verts.append( Loc2 ) 
-    segs.append( Loc2 ) 
-    
-    verts.append( Loc4 ) 
-    verts.append( Loc3 ) 
-    
-    if 0:
-    # Test extended fault trace and fault surface projection (plot) 
-	verts1 = np.array( verts ) 
-	fig = plt.figure(10) 
-	ax = fig.add_subplot( 111 ) 
-	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
-	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
-	#raw_input() 
-    
-    # check site is inside the polygon 
-    check = CheckPointInPolygon( SiteGeo[:2], np.array(verts)[:,:2] )
-
-    # compute site to fault trace min distance  
-    distToExtendedTrace = minDistToLineSeg2D(SiteGeo, segs, Fast=Fast)
-
-    if check or distToExtendedTrace == 0.0: 
-	Rx = distToExtendedTrace   # hanging wall
-    else: 
-	Rx = - distToExtendedTrace   # foot wall 
+    Rx = DistanceX( SiteGeo, FaultTrace, AveStrike=None, Fast=Fast ) 
 
     return Rjb, Rrup, Rx 
-
-
 
 
 
@@ -1866,6 +1836,14 @@ if __name__ == '__main__':
 	SRFfile = os.path.join( FilePath, FileName ) 
 	srfFaultSurfaceTest(SRFfile) 
     
+    if 1: 
+	x1,y1 = 0,0
+	x2,y2 = 1,1
+	px,py = 1,0 
+	dist,PP = ptToLine2D( x1,y1,x2,y2,px,py ) 
+	print dist 
+	print PP 
+
     if 0:
 	point0 = [1,1,1]
 	points = [[0,0,1],[0,1,0],[-1.0,0.5,0.5]] 
@@ -1878,7 +1856,7 @@ if __name__ == '__main__':
 	point2 = [0,1,0]
 	dist = ptToLineSeg3D(point0, point1, point2)
 	print dist 
-    if 1: 
+    if 0: 
 	point0 = [-118.286, 34.0192,0.0]
 	point1 = [-118.23476100000001, 34.067455000000002, -3.0] 
 	point2 = [-118.29677, 34.112583000000001, -3.0]

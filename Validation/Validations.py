@@ -44,20 +44,49 @@ else:
 
     sid = int(nga)   # test source which are in CyberShake
     metafile = outpth + '/CptDistSrc%s.py'%sid   
-    
     DistKey = ['Rjb','Rrup','Rx'] 
 
     if opt == 'TestDist': 
 	# Test distance calculation (analytical and discretized) 
+	SiteName = sys.argv[3]
+	SingleTest = int(sys.argv[4]) # 0 or 1
 
-        UCERF2_DM = load( './DistancesTestFiles/inputs/metadata_UCERF2_DM2.py' ).UCERF2_DM
+        # fault model
+	UCERF2_DM = load( inpth + '/metadata_UCERF2_DM2.py' ).UCERF2_DM
 	SourceNames = UCERF2_DM.keys() 
 
+	# sites 
+	sites = {}
+	sitefile = inpth + '/DisAggSites'
+	lines = open( sitefile, 'r' ).readlines() 
+	for il in range( len(lines) ):
+	    spl = lines[il].strip().split()
+	    sitename = spl[0] 
+	    sites[sitename] = [float(spl[1]),float(spl[2]),0.0] 
+
+        if SingleTest: 
+	    SelectSourceName = 'Elysian Park (Upper)'
+	    SelectSourceName = 'Raymond'
+	    SelectSourceName = 'Santa Monica, alt 1'
+	    SelectSourceName = 'Northridge'
+	    SelectSourceName = 'Channel Islands Thrust'
+        else: 
+	    Rjberr = []
+	    Rruperr = []
+	    Rxerr = []
+	    FaultLoc = []
+
         # read from OpenSHA output
-	SiteName = 'Site1'  # /inputs/DisAggSites
-	SiteGeom = [-118.286, 34.0192,0.0]
+	SiteGeom = sites[SiteName]
 	
-	filen = './DistancesTestFiles/inputs/DisAgg_%s.txt'%SiteName 
+	# plot site and fault trace distribution
+	fig = plt.figure(20) 
+	pfmt = 'png'
+	ax = fig.add_subplot( 2,2,1 ) 
+	ax.plot( SiteGeom[0],SiteGeom[1], 'r*' )
+        ax.set_title( 'FaultTraces for %s'%SiteName ) 
+
+	filen = inpth + '/DisAgg_%s.txt'%SiteName 
 	lines = open(filen,'r').readlines() 
 	for il in xrange( 1, len(lines) ): 
 	    spl = lines[il].strip().split() 
@@ -66,14 +95,8 @@ else:
 	    Rx0 = float(spl[-3])  
 	    Name = ' '.join( spl[3:-4] ) 
 	    if Name in SourceNames: 
-		print '='*100
-		print 'UCERF2 DM2.1 Source Name: %s'%Name
-		print 'OpenSHA calculation: (Rjb, Rrup, Rx) '
-		print Rjb0, Rrup0, Rx0 
 	
-		# Method 1 (discretized)
-		# read from srf file (Elysian Park, upper)
-		if Name == 'Elysian Park (Upper)' and True:
+	        if Name == 'Elysian Park (Upper)' and False:
 		    SRFfile = inpth + '/158_0/158_0.txt.variation-s0000-h0000'
 		    srfFaultSurface = srfFaultSurfaceExtract( SRFfile ) 
 		    FaultGeom = srfFaultSurface['FaultGeom'] 
@@ -84,23 +107,73 @@ else:
 		    print 'Using SRF file:' 
 		    print Rjb1, Rrup1, Rx1 
 
-		    # method 2 (simple fault)
-		    # Read from UCERF DM metadata
+		if SingleTest:
+		    if Name == SelectSourceName:
+			# Test one by one
+			print '='*100
+			print 'UCERF2 DM2.1 Source Name: %s'%Name
+			print 'OpenSHA calculation: (Rjb, Rrup, Rx) '
+			print Rjb0, Rrup0, Rx0 
+			
+			UpperSeisDepth = UCERF2_DM[Name]['AveUpperSeisDepth']
+			LowerSeisDepth = UCERF2_DM[Name]['AveLowerSeisDepth']
+			AveDip = UCERF2_DM[Name]['AveDip']
+			FaultTrace1 = UCERF2_DM[Name]['FaultTrace']
+
+			daa = None; ddd = None 
+			Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+			print 'Distance Calculation in pynga (simple Fault Surface): '
+			print Rjb2, Rrup2, Rx2 
+
+			# evenlygrided surface
+			daa = ddd = 1.0
+			Rjb3, Rrup3, Rx3 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
+			print 'Discretized Fault Surface Distance: '
+			print Rjb3,Rrup3,Rx3
+		
+		if not SingleTest:
+		    # run all
+		    print '='*100
+		    print 'UCERF2 DM2.1 Source Name: %s'%Name
+		    print 'OpenSHA calculation: (Rjb, Rrup, Rx) '
+		    print Rjb0, Rrup0, Rx0 
+		    
 		    UpperSeisDepth = UCERF2_DM[Name]['AveUpperSeisDepth']
 		    LowerSeisDepth = UCERF2_DM[Name]['AveLowerSeisDepth']
 		    AveDip = UCERF2_DM[Name]['AveDip']
 		    FaultTrace1 = UCERF2_DM[Name]['FaultTrace']
-
+		    Fault = np.array( FaultTrace1 )
+		    ax.plot( Fault[:,0], Fault[:,1] )
+		    ax.hold(True)
 		    daa = None; ddd = None 
 		    Rjb2, Rrup2, Rx2 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
-		    print 'Distance Calculation in pynga: '
+		    print 'Distance Calculation in pynga (simple Fault Surface): '
 		    print Rjb2, Rrup2, Rx2 
+		    Rjberr.append( Rjb2-Rjb0 )
+		    Rruperr.append( Rrup2-Rrup0 )
+		    Rxerr.append( Rx2-Rx0 )
+		    FaultLoc.append( [Fault[0,0],Fault[0,1]] )  # use the fault trace starting point to locate the distance scatters 
 
-		# evenlygrided surface
-		#daa = ddd = 1.0
-		#Rjb3, Rrup3, Rx3 = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1, UpperSeisDepth,LowerSeisDepth,AveDip, GridSpaceAlongStrike=daa, GridSpaceDownDip=ddd,Fast=True)
-		#print 'Slow way: '
-		#print Rjb3,Rrup3,Rx3
+        FaultLoc = np.array( FaultLoc ) 
+        lons = FaultLoc[:,0]
+	lats = FaultLoc[:,1]
+
+	ax = fig.add_subplot( 2,2,2 ) 
+	ax.set_title( 'Rjb error' ) 
+	i = 1
+	for f in [Rjberr, Rruperr, Rxerr]: 
+	    f = np.array( f ) 
+	    ax = fig.add_subplot( 2,2,i+1 )
+	    ax.plot( SiteGeom[0],SiteGeom[1], 'r*' )
+	    sc = ax.scatter( lons, lats, c=f, s=abs(f)*100, edgecolor='w' )
+	    ax.set_title(DistKey[i-1])
+	    ax.set_ylim([33.2,34.8])
+	    ax.set_xlim([-120., -117.5])
+	    fig.colorbar(sc)
+	    i += 1   
+	fig.savefig( plotpth + '/FaultTracesFor%s.%s'%(SiteName,pfmt), format=pfmt )
+        
+	#plt.show()
 
 
 
