@@ -1162,7 +1162,7 @@ def ptToLineSeg3D(point, point1, point2, Rscale=1.0):
     w1 = p0 - p2
     dotprod = sum(w0*v) 
     if dotprod <= 0: 
-	#print 'beyond point1'
+	print 'beyond point1'
 	Ploc = p1
 	if Rscale != 1.0: 
 	    a, hD, vD, az = LonLatToAngleDistance(Ploc, p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
@@ -1173,7 +1173,7 @@ def ptToLineSeg3D(point, point1, point2, Rscale=1.0):
     else: 
 	dotprod = sum(w1*v) 
 	if dotprod >= 0: 
-	    #print 'beyond point2'
+	    print 'beyond point2'
 	    Ploc = p2
 	    if Rscale != 1.0: 
 		a, hD, vD, az = LonLatToAngleDistance(Ploc,p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
@@ -1209,7 +1209,6 @@ def minDistToLineSeg3D( loc, segs, Rscale=1.0, Debug=False ):
     minDist = 1000.
     if Debug: 
 	print 'minDistToLineSeg3D Debug'
-
     for iseg in range(1,Npoints): 
 	p1 = segs[iseg-1] 
 	p2 = segs[iseg]
@@ -1217,9 +1216,10 @@ def minDistToLineSeg3D( loc, segs, Rscale=1.0, Debug=False ):
 	a, hD, vD, az = LonLatToAngleDistance(loc,Ploc,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
 	dist = np.sqrt( hD**2+vD**2 )
 	if Debug:
-	    print 'Line %s of %s:'%(iseg,Npoints), Ploc, hD, vD
+	    print 'Line seg %s of %s:'%(iseg,Npoints-1), Ploc, hD, vD
 	if dist <= minDist: 
 	    minDist = dist 
+    
     return minDist  
 
 
@@ -1272,25 +1272,32 @@ def minDistToSurfSeg( loc, segs, Rscale=1.0, Debug=False ):
     minDist = 1000.
     if Debug: 
 	print 'minDistToSurfSeg Debug'
+	Ppoints = []
+
     for iseg in range(Nseg):
 	points = segs[iseg]  # there are fout points
 	point1, point2, point3, point4 = points
 	tmp_dist, Ppoint = ptToSurf3D(loc, point1,point2, point3 )
+	if Debug: 
+	    Ppoints.append(Ppoint)  
+
 	a, hD, vD, az = LonLatToAngleDistance(loc,Ppoint,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
 	check = CheckPointInPolygon( Ppoint, points )
 	if check: 
 	    dist = np.sqrt(hD**2+vD**2)
         else: 
 	    pointsClosed = points + [points[0]]
-	    dist = minDistToLineSeg3D(loc, pointsClosed, Rscale=Rscale )
+	    dist = minDistToLineSeg3D(loc, pointsClosed, Rscale=Rscale, Debug=Debug )
 	if dist <= minDist: 
 	    minDist = dist 
 	
 	if Debug:
-	    print 'Segment %s: '%iseg, minDist, check, Ppoint
-
-    return minDist  
-
+	    print 'Segment %s: '%iseg, dist, check, Ppoint
+    
+    if Debug: 
+	return minDist, Ppoints
+    else: 
+	return minDist
 
 
 def FaultTraceGen(Origin, Dims, Mech):
@@ -1599,16 +1606,18 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
     verts.append( Loc4 ) 
     verts.append( Loc3 ) 
     
+    check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
     if Debug:
-    # Test extended fault trace and fault surface projection (plot) 
+	# Test extended fault trace and fault surface projection (plot) 
+	print 'Site is within the Extended Fault Surface projection:',check
 	verts1 = np.array( verts ) 
 	fig = plt.figure(10) 
 	ax = fig.add_subplot( 111 ) 
 	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
 	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
 	ax.plot( SiteGeom[0], SiteGeom[1], 'rs' )
+	ax.set_title( 'Fault Extension for Rx Calculation')
     
-    check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
     distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast, Debug=Debug)
     if check or distToExtendedTrace == 0.0:
 	Rx = distToExtendedTrace 
@@ -1633,31 +1642,35 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 	vertsClosed = FaultTrace + [FaultTrace[0]]
 	minRjb = minDistToLineSeg2D( SiteGeom, vertsClosed, Fast=Fast, Debug=Debug )
 	check = CheckPointInPolygon( SiteGeom, verts )
-	if Debug: 
-	    print 'Site is within surface projection: ',check
+	
 	if check: 
 	    Rjb = 0.0
 	else:
 	    Rjb = minRjb 
 	
 	# Rrup: point to surface (like Rjb, but to fault surface)
-	Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
-
+	if Debug: 
+	    Rrup, Ppoints = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
+	else:     
+	    Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
+	
 	# Rx: points to line (consider the sign, relative to the strike)
 	Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast, Debug=Debug )
 
 	if Debug: 
-	    # test plot
+	    print 'Site is within surface projection: ',check
 	    from mpl_toolkits.mplot3d import Axes3D 
 	    FaultTrace = np.array( FaultTrace )
+	    Ppoints = np.array( Ppoints )
 	    fig = plt.figure(1) 
 	    ax = Axes3D(fig) 
 	    verts1 = np.array( vertsClosed )
 	    ax.plot( verts1[:,0], verts1[:,1], -verts1[:,2], 'b-' )
 	    ax.plot( FaultTrace[:,0], FaultTrace[:,1], FaultTrace[:,2]*0.0, 'ko' )
 	    ax.plot( [SiteGeom[0]], [SiteGeom[1]], [0.0], 'r^' )
-	    plt.show()
-	
+	    ax.plot( Ppoints[:,0], Ppoints[:,1], Ppoints[:,2], 'rs' )
+	    plt.show() 
+
 	return Rjb, Rrup, Rx 
     
     else: 
