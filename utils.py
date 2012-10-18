@@ -5,9 +5,6 @@ Utilities used in NGA classes
 import os, time
 import numpy as np
 
-# optional for test plots 
-import matplotlib.pyplot as plt 
-
 # ===================
 # General Functions
 # ===================
@@ -1609,6 +1606,7 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
     check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
     if Debug:
 	# Test extended fault trace and fault surface projection (plot) 
+	import matplotlib.pyplot as plt 
 	print 'Site is within the Extended Fault Surface projection:',check
 	verts1 = np.array( verts ) 
 	fig = plt.figure(10) 
@@ -1659,6 +1657,7 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 
 	if Debug: 
 	    print 'Site is within surface projection: ',check
+	    import matplotlib.pyplot as plt 
 	    from mpl_toolkits.mplot3d import Axes3D 
 	    FaultTrace = np.array( FaultTrace )
 	    Ppoints = np.array( Ppoints )
@@ -1682,6 +1681,7 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 
 	if Debug: 
 	    Fault = FaultGeom.reshape((Nrow*Ncol,3))
+	    import matplotlib.pyplot as plt 
 	    fig = plt.figure(2) 
 	    ax = Axes3D(fig) 
 	    ax.plot( Fault[:,0], Fault[:,1], -Fault[:,2], 'b.' ) 

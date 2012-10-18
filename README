@@ -35,6 +35,9 @@ COMPONENTS
 	       Vs30 : average S wave velocity of upper 30m 
 	       Fhw  : This could be None, but then you have to specify Rx or azimuth (Source to Site azimuth) 
 		      the definition of azimuth can be found in James et al. (2011) BSSA paper 
+          Optional inputs: 
+               # Check __init__.py
+               
 
     2. Spudich and Chiou 2008 directivity model (under-construction)
        SC08.py 
@@ -62,14 +65,13 @@ DOWNLOAD
 INSTALLATION
     1. Pre-Install (dependences):
 	Basis python (2.5 or higher version) + numpy  (required by compute NGA results)
-          Optional: pyproj     ( used to compute unknown distance parameters for inputs in NGA models)
+          Optional: matplotlib (Debug to visually check validation and calculated results)
+                    pyproj     ( used to compute unknown distance parameters for inputs in NGA models)
                     xlrd, xlwt ( used in NGA flatfile manipulation tools )
 
-
     2. ADD to PYTHONPATH (on MacOS and Linux)
-        Assuming you download the package in local computer at ${HOME}/local/pynga
-
-	vi ./.bashrc (assuming you use bash)
+        Method1: Assuming you download the package in ${PathToSaveThePackage}
+	vi .bashrc (assuming you use bash, similar to other shells) in the home directory
 	   first, set up your PYTHONHOME (where you installed your python)
 	   second, set up the PYTHONPATH, usually, it equals to 
 	       export PYTHONPATH=${PYTHONHOME}/lib/python{version}/site_packages
@@ -82,7 +84,13 @@ USAGE
     In you script: 
 	from pynga import *      # import all NGA models
 	from pynga.utils import *    # import utils that will be used in the process
-
+        
+        # set inputs parameters: 
+        model_name = 'BA'; period = 3.0; Mw = 7.0; Rjb = 10.; Vs30 = 760.; Ftype='SS', \
+        
+        # The settings from those keywords, please refer to __init__.py 
+        median, sigmaT, tau, sigma = NGA08( model_name, Mw, Rjb, Vs30, period, epislon=0, Ftype=Ftype)
+        The unit of median, sigmaT, tau and sigma are all in (g)
 
 
 REFERENCES 

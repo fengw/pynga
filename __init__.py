@@ -348,6 +348,7 @@ def BA08Test():
     plt.show()
 
 
+
 def NGAtest(nga): 
     # simple test comparing with file: ./Validation/NGAmodelsTestFiles/nga_Sa_v19a.xls
     M = 6.93 
@@ -377,6 +378,7 @@ def NGAtest(nga):
     np.savetxt( pth + '/SimpleTest%s.txt'%nga, output ) 
 
     print output 
+
 
 # ====================
 # self_application
