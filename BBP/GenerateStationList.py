@@ -11,6 +11,7 @@ from pynga.utils import *
 
 Rrup0 = float(sys.argv[1])   # in km 
 NstaSelected = int(sys.argv[2])   # number of station to choose 
+GridSize = float(sys.argv[3])   # grid size to generate station list 
 
 # wait for Fabio's SRC file
 sfile = './inputs/bbp_validation_part_b_scenario_src_files'
@@ -32,8 +33,8 @@ strike = strike*np.pi/180.
 loc0 = [lon0, lat0, 0.0]
 
 vD = 0.0
-dhD = 2.0   # in km (grid size) 
-hDx = 50.
+dhD = GridSize   # in km (grid size) 
+hDx = 60.   # 20~60 km
 hDy = 0.5*L+Rrup0+dhD*2    # along strike
 
 az = strike + np.pi 
@@ -88,7 +89,7 @@ ax.set_xlabel('lon')
 ax.set_ylabel('lat') 
 ax.set_title( 'All station grid and Rrup' ) 
 fig.colorbar(img) 
-fig.savefig( './plots/AllStationRrup.pdf', format='pdf' )
+fig.savefig( './plots/AllStationRrup_GridSize%s.pdf'%('%.2f'%GridSize), format='pdf' )
 
 fig = plt.figure(2) 
 ax = Axes3D(fig) 
@@ -106,7 +107,7 @@ ax.set_zlim3d([-110,0])
 Loc2D1 = []; Rrups1 = []
 for iloc in xrange( Nloc ):
     #print Rrups[iloc]
-    if Rrup0-dhD<= Rrups[iloc] <= Rrup0+dhD:
+    if Rrup0-dhD/2.<= Rrups[iloc] <= Rrup0+dhD/2.:
 	Loc2D1.append( Loc2D[iloc] ) 
 	Rrups1.append( Rrups[iloc] ) 
     else: 
@@ -139,10 +140,9 @@ for ista in xrange( NstaSelected ):
     fid.write( '%s %s %s\n'%(LocS2[ista,0], LocS2[ista,1],Rrups2[ista]) )
 fid.close() 
 ax.plot( LocS2[:,0], LocS2[:,1], 0.0, 'r*', markersize=12, label='Selected %s Stations (Rrup=~%s km)'%(NstaSelected,Rrup0) ) 
-lg = ax.legend()
+lg = ax.legend(loc=0)
 lg.draw_frame(False)
-fig.savefig('./plots/StationGridFaultSurface.pdf',format='pdf')
-
-# plot to check the locations of selected sites: 
-
+ltext = plt.gca().get_legend().get_texts()
+plt.setp( ltext, fontsize = 8 )
+fig.savefig('./plots/StationSelection_GridSize%sNsta%sRrupAt%s.pdf'%('%.2f'%GridSize,NstaSelected,Rrup0),format='pdf')
 

@@ -1001,7 +1001,7 @@ def distToLine2D(loc1, loc2, loc3, Fast=False):
 
 
 # deal with line segments
-def minDistToLine2D( loc, segs, Fast=False ): 
+def minDistToLine2D( loc, segs, Fast=False, Debug = False ): 
     """
     Compute minimum distance between loc and a line made of segments
     Segments in line are contrained by two points loc1, loc2
@@ -1566,7 +1566,7 @@ def srfFaultSurfaceTest(SRFfile):
 
 
 
-def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
+def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, DealRx='Extension', Debug=False ):
     """
     Compute Rx by extending the fault trace to infinity in both ends 
     """ 
@@ -1581,51 +1581,77 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
     else:
 	dir = AveStrike
     
-    vector = [dir, 1000.0, 0.0]    # horizontal extension vector
-    Loc2 = EndLocation( pe, vector ) 
-    
-    vector[0] = dir + np.pi   # flip over trace dir 
-    Loc1 = EndLocation( ps, vector ) 
-    
-    # down-dip extension
-    vector[0] = dir + np.pi/2.  
+    vector = [dir+np.pi/2.,1000,0.0]
+    Loc1 = ps; Loc2 = pe
     Loc3 = EndLocation( Loc1, vector ) 
     Loc4 = EndLocation( Loc2, vector ) 
-
-    verts = []   # to form the polygon
-    segs = []    # to form the extend fault trace segments
-    verts.append(Loc1) 
-    segs.append(Loc1) 
+    verts = []; segs = []
     for ipoint in xrange( Npoints ): 
-	verts.append( FaultTrace1[ipoint] ) 
-	segs.append( FaultTrace1[ipoint] )
-    verts.append( Loc2 ) 
-    segs.append( Loc2 ) 
-    
-    verts.append( Loc4 ) 
+	verts.append( FaultTrace1[ipoint] )
+	segs.append( FaultTrace1[ipoint] ) 
+    verts.append( Loc4 )  
     verts.append( Loc3 ) 
-    
-    # Rx check  (using azimuth when site is outside the fault surface) 90-azimuth >= 45
-    # ...
 
     check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
-    if Debug:
-	# Test extended fault trace and fault surface projection (plot) 
-	import matplotlib.pyplot as plt 
-	print 'Site is within the Extended Fault Surface projection:',check
-	verts1 = np.array( verts ) 
-	fig = plt.figure(10) 
-	ax = fig.add_subplot( 111 ) 
-	ax.plot( verts1[:,0], verts1[:,1], 'ro' )
-	ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
-	ax.plot( SiteGeom[0], SiteGeom[1], 'rs' )
-	ax.set_title( 'Fault Extension for Rx Calculation')
-    
-    distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast, Debug=Debug)
-    if check or distToExtendedTrace == 0.0:
-	Rx = distToExtendedTrace 
+    if check: 
+	# one special case: Site is within the surface projection of the source (hanging wall)
+	distToFaultTrace = minDistToLine2D(SiteGeom, segs, Fast=Fast, Debug=Debug)
+	Rx = distToFaultTrace 
     else: 
-	Rx = -distToExtendedTrace 
+	# when site is outside the surface projection of the fault: 
+	# 1. extend the fault to both end (very large area) 
+	# 2. use azimuth to judge consider hanning all or not
+	if DealRx == 'Extension':
+	    # extend to both end (regardless azimuth)
+	    vector = [dir, 1000.0, 0.0]    # horizontal extension vector
+	    Loc2 = EndLocation( pe, vector ) 
+	    
+	    vector[0] = dir + np.pi   # flip over trace dir 
+	    Loc1 = EndLocation( ps, vector ) 
+	    
+	    # down-dip extension
+	    vector[0] = dir + np.pi/2.  
+	    Loc3 = EndLocation( Loc1, vector ) 
+	    Loc4 = EndLocation( Loc2, vector ) 
+
+	    verts = []   # to form the polygon
+	    segs = []    # to form the extend fault trace segments
+	    verts.append(Loc1) 
+	    segs.append(Loc1) 
+	    for ipoint in xrange( Npoints ): 
+		verts.append( FaultTrace1[ipoint] ) 
+		segs.append( FaultTrace1[ipoint] )
+	    verts.append( Loc2 ) 
+	    segs.append( Loc2 ) 
+	    verts.append( Loc4 ) 
+	    verts.append( Loc3 ) 
+	    check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
+	    if Debug:
+		# Test extended fault trace and fault surface projection (plot) 
+		import matplotlib.pyplot as plt 
+		print 'Site is within the Extended Fault Surface projection:',check
+		verts1 = np.array( verts ) 
+		fig = plt.figure(10) 
+		ax = fig.add_subplot( 111 ) 
+		ax.plot( verts1[:,0], verts1[:,1], 'ro' )
+		ax.plot( [ps[0],pe[0]], [ps[1],pe[1]], 'bx' )  # plot the initial points (where to start from)
+		ax.plot( SiteGeom[0], SiteGeom[1], 'rs' )
+		ax.set_title( 'Fault Extension for Rx Calculation')
+	    
+	    distToExtendedTrace = minDistToLineSeg2D(SiteGeom, segs, Fast=Fast, Debug=Debug)
+	    if check or distToExtendedTrace == 0.0:
+		Rx = distToExtendedTrace 
+	    else: 
+		Rx = -distToExtendedTrace 
+	
+	else: 
+
+	    # azimuth 
+	    # Rx check  (using azimuth when site is outside the fault surface) 90-azimuth >= 45
+	    # ...
+
+	    pass 
+    
     return Rx
 
 
