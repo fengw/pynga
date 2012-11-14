@@ -1039,7 +1039,7 @@ def ptToLineSeg2D(x1,y1,x2,y2,px,py):
     dotprod = ( px * x2 + py * y2  ) 
     if dotprod <= 0.0: 
 	# (px,py) is on the side of (x1,y1) (projection of the point (px,py) is not on the segment)
-	print 'beyond point1'
+	#print 'beyond point1'
 	projLenSq = 0.0 
     else:
 	# check the other side relationship
@@ -1047,7 +1047,7 @@ def ptToLineSeg2D(x1,y1,x2,y2,px,py):
 	py = y2-py 
         dotprod = px*x2 + py*y2 
 	if dotprod <= 0.0: 
-	    print 'beyond point2'
+	 #   print 'beyond point2'
 	    # (px,py) is on the side of (x2,y2) (projection of the point (px,py) is not on the segment)
 	    projLenSq = 0.0 
 	else: 
@@ -1159,7 +1159,7 @@ def ptToLineSeg3D(point, point1, point2, Rscale=1.0):
     w1 = p0 - p2
     dotprod = sum(w0*v) 
     if dotprod <= 0: 
-	print 'beyond point1'
+	#print 'beyond point1'
 	Ploc = p1
 	if Rscale != 1.0: 
 	    a, hD, vD, az = LonLatToAngleDistance(Ploc, p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
@@ -1170,7 +1170,7 @@ def ptToLineSeg3D(point, point1, point2, Rscale=1.0):
     else: 
 	dotprod = sum(w1*v) 
 	if dotprod >= 0: 
-	    print 'beyond point2'
+	 #   print 'beyond point2'
 	    Ploc = p2
 	    if Rscale != 1.0: 
 		a, hD, vD, az = LonLatToAngleDistance(Ploc,p0,CalcRadius=False,CalcDist=True,CalcAzimuth=False,Fast=True)
@@ -1337,6 +1337,7 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	b.BBP-type (including Fling)
     Using Stirling method (downdip extension perpendicular to the average strike when dealing with 
     this could deal with multiple segments
+    FaultTrace has to be a list which show the surface trace the rupture top
     """ 
     
     AveDip = AveDip * np.pi / 180. # To Radius 
@@ -1368,15 +1369,16 @@ def SimpleFaultSurface(FaultTrace, UpperSeisDepth, LowerSeisDepth, AveDip, GridS
 	    FaultTrace1 = []    # downdip extension points 
 	    vector = [az+np.pi/2,hD,vD]    # downdip extension 
 	    
-	    loc00 = EndLocation( loc1, vector ) 
-	    FaultTrace1.append( loc00 )
+	    loc3 = EndLocation( loc2, vector ) 
+	    FaultTrace1.append( loc3 )
+
+	    loc4 = EndLocation( loc1, vector ) 
+	    FaultTrace1.append( loc4 )
 	    
-	    loc00 = EndLocation( loc2, vector ) 
-	    FaultTrace1.append( loc00 )
+	    FaultTraceSeg = []
+	    FaultTraceSeg.append( [loc1,loc2,loc3,loc4] )
 	    
-	    FaultTrace1.reverse()
 	    FaultTrace = FaultTrace + FaultTrace1
-	    FaultTraceSeg = [FaultTrace,]
 	    return FaultTrace, FaultTraceSeg, AveStrike
 
 	# Extended fault surface grid
@@ -1603,6 +1605,9 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
     verts.append( Loc4 ) 
     verts.append( Loc3 ) 
     
+    # Rx check  (using azimuth when site is outside the fault surface) 90-azimuth >= 45
+    # ...
+
     check = CheckPointInPolygon( SiteGeom[:2], np.array(verts)[:,:2] )
     if Debug:
 	# Test extended fault trace and fault surface projection (plot) 
@@ -1625,7 +1630,7 @@ def DistanceX(SiteGeom, FaultTrace1, AveStrike=None, Fast=True, Debug=False ):
 
 
 
-def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True,Debug=False): 
+def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, GridSpaceAlongStrike=None, GridSpaceDownDip=None,Fast=True,Debug=False,RrupCalc=True,RxCalc=True): 
     """
     Compute Rjb,Rrup,Rx for simple fault plane
     FaultTrace1 is just the top fault trace 
@@ -1646,14 +1651,20 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 	else:
 	    Rjb = minRjb 
 	
-	# Rrup: point to surface (like Rjb, but to fault surface)
-	if Debug: 
-	    Rrup, Ppoints = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
-	else:     
-	    Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
-	
-	# Rx: points to line (consider the sign, relative to the strike)
-	Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast, Debug=Debug )
+	if RrupCalc:
+	    # Rrup: point to surface (like Rjb, but to fault surface)
+	    if Debug: 
+		Rrup, Ppoints = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
+	    else:
+		Rrup = minDistToSurfSeg(SiteGeom, FaultSeg, Rscale=DegToKm, Debug=Debug ) 
+	else: 
+	    Rrup = None
+
+	if RxCalc:
+	    # Rx: points to line (consider the sign, relative to the strike)
+	    Rx = DistanceX( SiteGeom, FaultTrace1, AveStrike=None, Fast=Fast, Debug=Debug )
+	else: 
+	    Rx = None 
 
 	if Debug: 
 	    print 'Site is within surface projection: ',check
@@ -1677,7 +1688,7 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 	FaultGeom = np.array( FaultGeom ) 
 	Nrow, Ncol, Nelm =  FaultGeom.shape 
 
-	Rjb, Rrup, Rx = DistanceToEvenlyGriddedSurface( SiteGeom, FaultGeom, Fast=Fast )
+	Rjb, Rrup, Rx = DistanceToEvenlyGriddedSurface( SiteGeom, FaultGeom, Fast=Fast, RrupCalc=RupCalc, RxCalc=RxCalc )
 
 	if Debug: 
 	    Fault = FaultGeom.reshape((Nrow*Ncol,3))
@@ -1687,13 +1698,14 @@ def DistanceToSimpleFaultSurface(SiteGeom, FaultTrace1, UpperSeisDepth, LowerSei
 	    ax.plot( Fault[:,0], Fault[:,1], -Fault[:,2], 'b.' ) 
 	    ax.plot( Fault[:,0], Fault[:,1], Fault[:,2]*0.0, 'ko' ) 
 	    plt.show() 
+	
 	return Rjb, Rrup, Rx 
 
 
 
 # General distance calculation (before this, you need to generate FaultGeo)
 # only requirement is the fault geometry (explicitly)
-def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
+def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True, RrupCalc=True, RxCalc=True):
     """
     Compute Rjb, Rrup, Rx explicitly given discretized fault (3D) surface geometry and site location (in lon/lat)
 	Rx just use the fault trace along-strike and azimuth between the two points at the two ends of the fault and 
@@ -1727,8 +1739,10 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
 	totalDist = np.sqrt( hD**2 + vD**2 )
 	if totalDist <= minRrup: 
 	    minRrup = totalDist
-    
-    Rrup = minRrup 
+    if RrupCalc:
+	Rrup = minRrup 
+    else: 
+	Rrup = None 
 
     # check site is within the surface projection of the fault 
     verts = []
@@ -1774,8 +1788,11 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True):
     # ============
     # compute Rx by extending fault trace and fault surface projection
     # ============
-    FaultTrace = FaultGeo[0] # first row to get the fault trace for Rx calculation 
-    Rx = DistanceX( SiteGeo, FaultTrace, AveStrike=None, Fast=Fast ) 
+    if RxCalc:
+	FaultTrace = FaultGeo[0] # first row to get the fault trace for Rx calculation 
+	Rx = DistanceX( SiteGeo, FaultTrace, AveStrike=None, Fast=Fast ) 
+    else: 
+	Rx = None 
 
     return Rjb, Rrup, Rx 
 
