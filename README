@@ -1,5 +1,5 @@
 PYTHON PACKAGE: pynga
-AUTHOR: Feng Wang, Jan, 2012
+AUTHOR: Feng Wang (originally, Jan 2012)
 
 DESCRIPTION 
     The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
@@ -42,6 +42,7 @@ COMPONENTS
     2. Spudich and Chiou 2008 directivity model (under-construction)
        SC08.py 
 	   right now, it requires inputs generated from Matlab package (Spudich and Chiou 2008)
+           The self-generated inputs would be available soon...
     
     3. NGA dataset (xls format) manipulation 
        NGAdataset.py 
@@ -50,11 +51,14 @@ COMPONENTS
        ./NGAdata/NGA_Flatfile.xls 
     
     5. Validation of pynga
-       ./Validation, the pynga is validated with original NGA models (computed by original model-developer using Fortran)
-       ./Validation/plots show the comparison results (within 0.02% for PGA and SA at various periods)
+       ./Validation, the pynga is validated with OpenSHA (discussion with Christine), and the distance calculation
+       utilities are validated with OpenSHA
+       ./Validation/plots/ValidationNGAs/ show the NGA calculation comparison results (within 0.02% for PGA and SA at various periods)
+       ./Validation/plots/ValidationDistances/ show the distance calculation comparison (within 1km)
   
-    6. One application of pynga in Fling Study (basis for broadband application of pynga)
-       ./FlingStudy
+    6. Applications of pynga in Fling Study (basis for broadband application of pynga)
+       ./FlingStudy (similar to BBP, src read, distance calculation and GMPEs results)
+       ./BBP ( simple workflow for BBP Part B GMPE comparisons with simulation results ) 
 
 
 DOWNLOAD 

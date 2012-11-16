@@ -6,6 +6,11 @@ A module that implement pynga in BBP (specific platform) to compute
 median and standard deivation of ground motions 
 
 ./GMPEworkflow.py shows the general workflow when applying pynga in BBP 
+
 ./GenerateStationList.py is an utility that generates stations list based on src input for designing 
 simulations for comparison. 
-first input argument 
+
+first input argument: distance to extend the fault trace end
+second: grid size for generating stations locations 
+third: number of stations to select ( the condition such as Rrup = 30 or 50 can be manually set in the code)
+forth: plot or not (1 or 0)
