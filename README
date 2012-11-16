@@ -64,6 +64,7 @@ COMPONENTS
 DOWNLOAD 
     Since the package is version-controlled on GitHub, so you can clone the package using "git clone" 
 	git clone git@github.com:fengw/pynga.git 
+    or go to "https://github.com/fengw/pynga" to download a tar version of the package
 
 
 INSTALLATION
@@ -82,6 +83,10 @@ INSTALLATION
 	   third, add the package downloaded into the PYTHONPATH by 
 	      export PYTHONPATH=$HOME/local/pynga:$PYTHONPATH
 
+UPDATES
+    I might change the code very often for my research purposes, but you can keep updating your version of pynga with mine
+    by using: 
+       git pull 
 
 USAGE
     Launch python or ipython, type: import pynga
