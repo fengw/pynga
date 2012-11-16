@@ -8,10 +8,10 @@ import numpy as np
 from pynga import * 
 from pynga.utils import * 
 
-R0 = float(sys.argv[1])   # in km (distance extend from the both ends of the rupture) 
+R0 = float(sys.argv[1])   # in km (distance extend from the both ends of the rupture, used to generate the grid space)
 GridSize = float(sys.argv[2])   # grid size to generate station list 
 NstaSelected = int(sys.argv[3])   # number of station to choose 
-VisualFlag = int(sys.argv[4])   # plot or not
+VisualFlag = int(sys.argv[4])   # plot or not (for check the distance calculations)
 
 # SRC file (specify the location of the source)
 sfile = './inputs/bbp_validation_part_b_scenario_src_files'

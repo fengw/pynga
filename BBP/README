@@ -10,7 +10,8 @@ median and standard deivation of ground motions
 ./GenerateStationList.py is an utility that generates stations list based on src input for designing 
 simulations for comparison. 
 
-first input argument: distance to extend the fault trace end
+Command line arguments: 
+first: distance to extend the fault trace end (in order to generate the station grid space)
 second: grid size for generating stations locations 
 third: number of stations to select ( the condition such as Rrup = 30 or 50 can be manually set in the code)
-forth: plot or not (1 or 0)
+forth: plot or not (1 or 0) to check your grid and distance calculations
