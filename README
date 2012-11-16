@@ -87,6 +87,9 @@ UPDATES
     I might change the code very often for my research purposes, but you can keep updating your version of pynga with mine
     by using: 
        git pull 
+    in the pynga directory 
+   
+    If you find any bugs in the code, let me know, and my email address is: fengo.win@gmail.com
 
 USAGE
     Launch python or ipython, type: import pynga
