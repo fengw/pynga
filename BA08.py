@@ -417,15 +417,16 @@ def BA08nga_test(T,CoefTerms):
     """
     Test BA features
     """
-    
     # input parameter list
-    Rjb = 30
+    Rjb = 0
+    Rjb = 200.
     Vs30 = 748.0,1200.,345.,160.
-    Mw = 7.
-    AB11 = None
+    Vs30 = 300.
+    Mw = 5.
+    AB11 = 1
     rake=180.
     rake = None
-    Ftype='SS'
+    Ftype='U'
     kwds = {'rake':rake,'Mech':None,'Ftype':Ftype,'AB11':AB11,'CoefTerms':CoefTerms}
     BAnga = BA08_nga()    # BA08nga instance
     values = mapfunc( BAnga, Mw, Rjb, Vs30, T, **kwds )
@@ -439,7 +440,7 @@ if __name__ == '__main__':
     T = 10.0; NewCoefs = {'c1':-0.1,'c2':-0.14}  # use the updated one 
     T = 10.0; NewCoefs = {'c1':-0.09824,'c2':-0.13800} # use the updated one 
     T = 10.0; NewCoefs = {'c1':-0.1,'c2':-0.1000}  # use the updated one
-    T = 10.0; NewCoefs = None     # pure one
+    T = 3.0; NewCoefs = None     # pure one
 
     print 'BA SA at %s second'%('%3.2f'%T)
     CoefTerms={'terms':(1,1,1),'NewCoefs':NewCoefs}

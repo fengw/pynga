@@ -2,13 +2,10 @@
 # ==================
 # BBP application 
 # ==================
-
 A module that implement pynga in BBP (specific platform) to compute 
 median and standard deivation of ground motions 
 
-Class to generalize the input file formats (for future applications) 
-
-and read simulation results, simulation parameters (src, site location, site condition 
-and other needed information for comparison and validation) 
-
-
+./GMPEworkflow.py shows the general workflow when applying pynga in BBP 
+./GenerateStationList.py is an utility that generates stations list based on src input for designing 
+simulations for comparison. 
+first input argument 

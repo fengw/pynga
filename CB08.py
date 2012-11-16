@@ -222,14 +222,8 @@ class CB08_nga():
 
         # Determine Site-Specific parameters
         if Z25 == None:
-	    if Z15 != None:
-		Z25 = 636. + 1.549*Z15
-	    else:
-		if Z10 == None:
-		    Z10 = calc_Z1(self.Vs30,'AS')   # R nga uses AS   
-		    			            # Matlab use CY
-		Z25 = 519. + 3.595*Z10
-	    self.Z25 = Z25 / 1000.   # km
+	    self.Z25 = calc_Z25(self.Vs30,Z1model='CY')
+
 	else: 
 	    self.Z25 = Z25  # input Z25 should be in km
 

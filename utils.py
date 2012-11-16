@@ -1828,7 +1828,7 @@ def DistanceToEvenlyGriddedSurface(SiteGeo, FaultGeo, Fast = True, RrupCalc=True
 # ==========================
 # Site-Specific Parameters
 # ==========================
-def calc_Z1(Vs30,NGAmodel):
+def calc_Z1(Vs30,Z1model):
     """
     Compute Z1.0 parameter for AS and CY model if not specified
     Vs30 in m/s
@@ -1838,19 +1838,19 @@ def calc_Z1(Vs30,NGAmodel):
 	print ' Vs30 should be larger than 0'
 	raise ValueError
 
-    if NGAmodel == 'AS':
+    if Z1model == 'AS':
 	if Vs30 < 180.:
 	    Z10 = 6.745
 	elif 180 <= Vs30 <= 500.:
 	    Z10 = 6.745 - 1.35*np.log( Vs30/180. )
 	elif Vs30 > 500:
 	    Z10 = 5.394 - 4.48 * np.log( Vs30/500. )
-    elif NGAmodel == 'CY':
+    elif Z1model == 'CY':
 	Z10 = 28.5 - 3.82/8 * np.log( Vs30**8 + 378.7**8 )
     return np.exp( Z10 )   # in meter
 
 
-def calc_Z25( Vs30=None, Z1=None, Z15=None ):
+def calc_Z25( Vs30, Z1=None, Z15=None, Z1model='CY' ):
     """
     input Vs30 m/s; Z1 in m; Z15 in m
     """
@@ -1872,7 +1872,7 @@ def calc_Z25( Vs30=None, Z1=None, Z15=None ):
     elif Z1 != None:
 	Z25 = 519 + 3.595*Z1
     elif Vs30 != None:
-	Z1 = calc_Z1( Vs30, 'AS' )
+	Z1 = calc_Z1( Vs30, Z1model )
 	Z25 = 519 + 3.595*Z1
     return Z25 / 1000.   # in km
 
@@ -1935,6 +1935,17 @@ def GetIntraInterResiduals(residualT, EQID, sigmaT, tau, sigma, AS=None):
 if __name__ == '__main__': 
     
     if 0:
+	# test Vs30 and Z10, Z25 calculation
+	Vs30 = 863
+	Z10 = calc_Z1( Vs30, 'CY' ) 
+	print Z10 
+	Z10 = calc_Z1( Vs30, 'AS' ) 
+	print Z10 
+	Z25 = calc_Z25(Vs30, Z1model='CY') 
+	print Z25 
+
+
+    if 0:
 	# Test srfFaultSurfaceExtract
 	FilePath ='./Validation/DistancesTestFiles/inputs/158_0' 
 	FileName = '158_0.txt.variation-s0000-h0000'  
@@ -1954,7 +1965,8 @@ if __name__ == '__main__':
 	points = [[0,0,1],[0,1,0],[-1.0,0.5,0.5]] 
 	dist, point1 = ptToSurf3D( point0, points ) 
 	print dist, point1 
-    if 1: 
+    
+    if 0: 
 	point0 = [0.5,0.5,1] 
 	point0 = [0,2,1]
 	point1 = [0,0,0]
