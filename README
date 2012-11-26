@@ -1,5 +1,9 @@
 PYTHON PACKAGE: pynga
 AUTHOR: Feng Wang (originally, Jan 2012)
+EMAIL: fengo.win@gmail.com 
+
+LICENSE: 
+    This software is free (?)
 
 DESCRIPTION 
     The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
@@ -64,7 +68,10 @@ COMPONENTS
 DOWNLOAD 
     Since the package is version-controlled on GitHub, so you can clone the package using "git clone" 
 	git clone git@github.com:fengw/pynga.git 
-    or go to "https://github.com/fengw/pynga" to download a tar version of the package
+    or go to "https://github.com/fengw/pynga" to download the latest version of the package
+    or you can choose to download previous versions by going to: 
+    https://github.com/fengw/pynga/tags
+    and choose the version you want to download. (name convension: v12.11.0 means: version 2012, Nov, Updates)
 
 
 INSTALLATION
