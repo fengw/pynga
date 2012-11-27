@@ -11,6 +11,7 @@ from pynga.utils import *
 # 1. Read Event Info from SRC file 
 # assume the SRC file has full-path name: sfile
 # ==============================
+sfile = './inputs/bbp_validation_part_b_scenario_src_files'
 lines = open( sfile ).readlines()
 values = []
 for il in xrange( len(lines) ):
@@ -28,29 +29,29 @@ Mech = strike, dip, rake
 # Vs30, Z1.0 and Z2.5 are also needed from Station List 
 # =====================
 SiteGeom = [-118.0,33.5,0.0]    # location of site
-FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip = FaultTraceGen( origin, Dims, Mech )
+FaultTrace1, UpperSeisDepth, LowerSeisDepth, AveDip, das, ddd = FaultTraceGen( origin, Dims, Mech )
 Rjb, Rrup, Rx = DistanceToSimpleFaultSurface(SiteGeom,FaultTrace1,UpperSeisDepth,LowerSeisDepth,AveDip)    # in km 
 
 # assuming you get the following site condition from station list:
 # just for one, you could use a list of station parameters
-Vs30 = 760.   # in m/s
-Z10 = 1000    # in meter
-Z25 = 3.0     # in km 
+Vs30 = 863.   # in m/s
+Z10 = None    # in meter
+Z25 = None     # in km 
 
 # ======================
 # 3. Read periods list 
 # ======================
-periods = [1.0, 3.0, 10.0,]   # in seconds (could be any values in between 0.01 to 10) 
+periods = [0.11,]  # in seconds (could be any values in between 0.01 to 10) 
 
 # =====================
 # 4. Compute PSA for the given station 
 # =====================
-nga_model = 'BA'    # you can use 'CB','CY', and 'AS' as well, or loop over all four NGA models
+nga_model = 'CY'    # you can use 'CB','CY', and 'AS' as well, or loop over all four NGA models
 StationMedian = []  # for a given event and a given station, this list has period-dependent PSA values
 for ip in xrange( len(periods) ):
     period = periods[ip] 
     median, sigmaT, tau, sigma = NGA08( nga_model, M, Rjb, Vs30, period, rake=rake, dip=dip, W=W, Ztor=ztor, Rrup=Rrup, Rx=Rx, Z10=Z10, Z25=Z25 )   # this input list should be enough based on what BBP has 
-    StationMedian.append( median )    # median in (g) for PSA and PGA
+    StationMedian.append( median[0] )    # median in (g) for PSA and PGA
 
 # You can save StationMedian into file (one event, one station) for later uses (compare with simulation results for the same event and the same station)
 

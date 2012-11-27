@@ -231,12 +231,13 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 		# period is within the periods list
 		itmp = 1
 		break
+
 	if itmp == 1:
 	    values = mapfunc( CYnga, Mw, Rjb, Vs30, period, rake, **kwds )
 	    values = np.array( values )
 	
 	if itmp == 0:
-	    print 'do the interpolation...'
+	    print 'Do the interpolation at period = %s for NGA model: %s'%('%.3f'%period, model_name)
 	    # do the interpolation for periods that is not in the period list of the NGA model
 	    ind_low =  (periods < period).nonzero()[0]
 	    ind_high = (periods > period).nonzero()[0]
@@ -278,7 +279,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	    #raw_input()
 
 	if itmp == 0:
-	    print 'AS interpolating period'
+	    print 'Do the interpolation at period = %s for NGA model: %s'%('%.3f'%period, model_name)
 
 	    # do the interpolation for periods that is not in the period list of the NGA model
 	    ind_low =  (periods < period).nonzero()[0]
