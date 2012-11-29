@@ -1,0 +1,29 @@
+function PulsePeriodForDSI
+
+%Purpose: To examine the variation of pulse period with magnitude given by
+%some empirical models - then compared with the definition of DSI
+
+M=5:0.1:8;
+
+%ShahiBaker2010
+a=[  -5.73];
+b=[   0.99];
+sig=[ 0.56];
+
+for j=1:length(a)
+    for i=1:length(M)
+        mulnTp_M(i,j) = a(j) + b(j)*M(i);
+    end
+end
+
+
+color=[1 0 0];
+fig1=figure(1);
+axes(
+for i=1:length(a)
+    semilogy(M,exp(mulnTp_M),'LineWidth',3,'LineStyle','-','Color',color(i,:)); hold on;
+    semilogy(M,exp(mulnTp_M+sig'*ones(1,length(a))),'LineWidth',3,'LineStyle','--','Color',color(i,:));
+    semilogy(M,exp(mulnTp_M-sig'*ones(1,length(a))),'LineWidth',3,'LineStyle','--','Color',color(i,:));
+end
+xlim([5 8]); ylim([0.2 10]);
+%now plot DSI range from 2.0 - 5.0

@@ -1,0 +1,85 @@
+function CompareCorrelationsWithSA
+
+%Purpose: To compare the correlations of ASI, SI, and DSI with SA as a
+%function of SA period
+
+T=[0.01	0.02	0.03	0.04	0.05	0.075	0.1	0.15	0.2	0.25	0.3	0.4	0.5	0.75	1	1.5	2	3	4	5	7.5	10];
+
+% DSI,SA
+for i=1:length(T)
+%     a1=0.90; b1=0.8; c1=0.042; d1=2.2; e1=0.075; f1=1;
+%     a2=0.8; b2=0.955;  c2=0.15; d2=2.2; e2=0.3;  f2=1;
+%     a3=1.; b3=0.22; c3=0.85; d3=0.9; f3=1.2;
+    %a=value for x'=0; b=value for x'=1; c=x' value at midpoint between a
+    %and b; e=controls slope; f=controls log scaling
+    a=[0.32 0.08 0.82];
+    b=[0.14 0.87 0.76];
+    c=[0.07 0.65 7.5];
+    d=[1.8 0.79 5];
+    e=[0.15 4 10];
+    f=[1 1 1];
+    %sigma params
+    as=-0.036;
+    bs=0.0674;
+    for j=1:3
+        if T(i)<=e(j)
+            %mean
+            rho_DSI_SA_fit(i,1)=(a(j)+b(j))/2-(a(j)-b(j))/2*tanh(d(j)*log((T(i)/c(j))^f(j)));
+%             %sigma
+%             [z_DSI_SA_fit]=FisherZTransformation(rho_DSI_SA_fit(i,1));
+%             sigma_DSI_SA_fit(i)=as*rho_DSI_SA_fit(i,1)+bs;
+%             %16th and 84th percentiles
+%             rho_DSI_SA_fit(i,2)=InvFisherZTransformation(z_DSI_SA_fit+sigma_DSI_SA_fit(i));
+%             rho_DSI_SA_fit(i,3)=InvFisherZTransformation(z_DSI_SA_fit-sigma_DSI_SA_fit(i));
+            break
+        end
+    end
+end
+
+%parametric fit
+% ASI,SA
+for i=1:length(T)
+    %a=value for x'=0; b=value for x'=1; c=x' value at midpoint between a
+    %and b; e=controls slope; f=controls log scaling
+    a=[0.927 0.823 1.05];
+    b=[0.823 0.965 0.29];
+    c=[0.04 0.14 0.8];
+    d=[1.8 2.2 1.7];
+    e=[0.075 0.3 10];
+    f=[1 1 0.6];
+    %sigma params
+    as=-0.0583;
+    bs=0.0975;
+    for j=1:3
+        if T(i)<=e(j)
+            %mean
+            rho_ASI_SA_fit(i,1)=(a(j)+b(j))/2-(a(j)-b(j))/2*tanh(d(j)*log((T(i)/c(j))^f(j))); 
+            break
+        end
+    end
+end
+% SI,SA
+for i=1:length(T)
+    a=[0.6 0.38 0.95];
+    b=[0.38 0.94 0.68];
+    c=[0.045 0.33 3.10];
+    d=[1.5 1.4 1.6];
+    e=[0.1 1.5 10];
+    f=[1 1 1.0];
+    for j=1:3
+        if T(i)<=e(j)
+            %mean
+            rho_SI_SA_fit(i,1)=(a(j)+b(j))/2-(a(j)-b(j))/2*tanh(d(j)*log((T(i)/c(j))^f(j))); 
+        end
+    end
+end
+
+%plot
+fig1=figure(1)
+axes('Parent',gcf,'FontSize',16);
+semilogx(T,rho_ASI_SA_fit,'LineWidth',3,'LineStyle','-','Color',[1 0 0]); hold on;
+semilogx(T,rho_SI_SA_fit,'LineWidth',3,'LineStyle','--','Color',[0 1 0]);
+semilogx(T,rho_DSI_SA_fit,'LineWidth',3,'LineStyle',':','Color',[0 0 1]);
+legend('\rho_{lnASI,lnSa}','\rho_{lnSI,lnSa}','\rho_{lnDSI,lnSa}');
+xlabel('Period, T (s)','FontSize',16); ylabel('Corr. Coeff., \rho','FontSize',16);
+grid on;

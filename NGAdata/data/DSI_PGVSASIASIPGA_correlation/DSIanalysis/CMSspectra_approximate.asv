@@ -1,0 +1,45 @@
+function CMSspectra_approximate
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Purpose: To compute the approximate CMS spectra by using the mean
+%M,R,epsilon values from PSHA deaggregation
+
+%required M-files in same folder
+%   SA_correlation.m
+%Reference: Baker, JW and Cornell, CA, 2006.  Spectral acceleration, record
+%selection and epsilon.  Earthquake Engineering and Structural Dynamics.
+%35: 1077-1095.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+M=6.5;
+R=30;
+eps=1;
+targetSa=0.3;   %in g
+period=0.5; %seconds
+
+siteprop.soiltype='rock';
+faultprop.faultstyle='normal';
+siteprop.g=981;
+siteprop.V30=300;
+
+periodrange=0:0.1:4;
+IMR=@BooreAtkinson_2007_nga;
+
+%get predicted SA
+[SApredicted,sigma_SApredicted]=BooreAtkinson_2007_nga(M,R,siteprop,faultprop);
+
+%adjust epsilon value to get target Sa
+epsilonmod=log(targetSa/SApredicted)/sigma_SApredicted;
+
+%get unconditional spectra and correlation at range of periods
+for i=1:length(periodrange)
+    siteprop.period=periodrange(i);
+    [SA(i),sigma_SA(i)]=BooreAtkinson_2007_nga(M,R,siteprop,faultprop);
+    [rho(i)]=SA_correlation(periodrange(i),period);
+    %get CMS
+    SA_CMSmean(i)=exp(log(SA(i))+sigma_SApredicted*rho(i)*epsilonmod);
+end
+% plot(periodrange,SA)
+
+
+
+
