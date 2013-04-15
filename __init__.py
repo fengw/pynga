@@ -304,15 +304,15 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
                     values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
 
     # outputs
+    NGAsigmaT = values[:,1]
+    NGAtau = values[:,2]
+    NGAsigma = values[:,3]
+    
     if epislon: 
 	NGAmedian = np.exp( np.log(values[:,0]) + epislon * NGAsigmaT )
     else: 
 	NGAmedian = values[:,0]  
 
-    NGAsigmaT = values[:,1]
-    NGAtau = values[:,2]
-    NGAsigma = values[:,3]
-    
     # returned quantities are all in g, not in log(g), event for the standard deviations
     return NGAmedian, np.exp( NGAsigmaT ), np.exp( NGAtau ), np.exp( NGAsigma )      # all in g, include the standard deviation
 
