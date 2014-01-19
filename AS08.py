@@ -244,7 +244,7 @@ class AS08_nga:
 	if Z10 == None:
 	    self.Z10 = calc_Z1(self.Vs30,'AS')   # in meter
 	else:
-	    self.Z10 = Z10
+	    self.Z10 = Z10     # should be in meter
 
 	self.Fas = Fas    # aftershock flag (0 or 1 )
         self.VsFlag = VsFlag    # 0: estimated Vs30; 1: measured Vs30
@@ -698,7 +698,7 @@ def AS08nga_test(T,CoefTerms):
 	dip = 70 
 	Rrup = Rjb = Rx = 30 
 	Fhw = 0 
-	Vs30 = 760 
+	Vs30 = [860,300] 
 	Z10 = 0.024 * 1000   # in meter 
 	Z25 = 2.974    # in km 
 	VsFlag = 0 
@@ -706,6 +706,12 @@ def AS08nga_test(T,CoefTerms):
 
 
     ASnga = AS08_nga()
+
+    # Test of shallow soil depth site but different Vs30 (especially the small value in Vs30) to explain the smaller value in b(r) of AS-BA
+    Vs30 = [150,200,300,400,500,600,800,1200]
+    for vs in Vs30: 
+	print ASnga.soil_function(Z10=24., Vs30=vs, Tother=3.0) 
+    raw_input() 
 
     kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'dip':dip,'Ztor':Ztor,'W':W,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag,'CoefTerms':CoefTerms}
     values = mapfunc( ASnga, Mw, Rjb, Vs30, T, rake, **kwds )
@@ -724,7 +730,7 @@ if __name__ == '__main__':
 	#T = 0.1; NewCoefs = None
 	#T = 0.1; NewCoefs = {'Vlin':1032.5,'b':-1.624}
 	NewCoefs = None
-	T = 1.0
+	T = 3.0
 	CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':NewCoefs}
 
 	print 'AS SA at %s'%('%3.2f'%T)

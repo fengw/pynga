@@ -6,12 +6,12 @@ import xlrd, xlwt
 # =======================
 # NGA flatfiles  (data)
 # =======================
-def ReadFlatFileNGA(file):
+def ReadFlatFileNGA(xlsfile):
     """
     Generate NGA flatfile dictionary for generate usage
     """
     # read in excel flatfile
-    book = xlrd.open_workbook(file)
+    book = xlrd.open_workbook(xlsfile)
     sh = book.sheet_by_index(0)    # 'Flatfile' sheet name
     keys = sh.row_values(0)
     for itmp in xrange( len(keys) ):
@@ -83,8 +83,8 @@ def ReadFlatFileNGA(file):
     return nga_flats, nga_IMs
 
 
-def test_ReadFlatFileNGA(file):
-    nga_flats, nga_IMs = ReadFlatFileNGA(file)
+def test_ReadFlatFileNGA(xlsfile):
+    nga_flats, nga_IMs = ReadFlatFileNGA(xlsfile)
     print nga_flats.keys()
     print nga_IMs.keys()
     print nga_flats['Fhw']
@@ -267,14 +267,14 @@ def WriteSubsetNGA(flats, IMs, xlsfile):
     wbk.save(xlsfile)
 
 
-def ReadSubsetNGA(file, ftype='xls'):
+def ReadSubsetNGA(xlsfile, ftype='xls'):
     """
     Read Subset xls file or txt file
     """
     nga_flats = {}; nga_IMs = {}
     if ftype == 'xls':
 	# read in excel flatfile
-	book = xlrd.open_workbook(file)
+	book = xlrd.open_workbook(xlsfile)
 	sh1 = book.sheet_by_index(0)    # Flatinfo
 	sh2 = book.sheet_by_index(1)    # IMinfo
 	
@@ -395,6 +395,210 @@ def IMs_nga_Py( flatinfo, periods, NGA_models = ['BA',], NGAs=None ):
 
 
 
+def HypocenterDistribution(xlsfile):
+    
+    # Read in all xls content
+    book = xlrd.open_workbook(xlsfile)
+    sh = book.sheet_by_index(0)    # 'Flatfile' sheet name
+    keys = sh.row_values(0)
+    for itmp in xrange( len(keys) ):
+	keys[itmp] = keys[itmp].encode('ascii')
+    
+    # select corresponding fields
+    select_keys = ['EQID', 'Dip (deg)', 'Rake Angle (deg)', 'Source to Site Azimuth (deg)','X',\
+	    'Fault Rupture Width (km)', 'Hypocenter Depth (km)', 'Dept to Top Of Fault Rupture Model']
+    icol_dict = {}
+    for ikey, key in enumerate( keys ):
+	if key in select_keys:
+	    icol_dict[key] = ikey
+    
+    # first select to get subset (all fault models)
+    subset = {}
+    FFlag = 'Finite Rupture Model: 1=Yes;  0=No'
+    for ikey, key in enumerate( keys ):
+	if FFlag == key:
+	    iflag = ikey 
+	    break 
+    Fcol0 = sh.col_values(iflag)[1:]    # finite fault flag
+       
+    for icol, key in enumerate( select_keys ):
+	col0 = sh.col_values(icol_dict[key])
+	col0[0] = col0[0].encode('ascii')
+	irow0 = 0; col_values = []
+	for irow in range(1, len(col0) ):
+	    if Fcol0[irow-1] == 1:
+		if isinstance( col0[irow], str ):
+		    col00 = col0[irow].strip()
+		else: 
+		    col00 = col0[irow]
+		    if isinstance( col00, unicode ):
+			col00 = col00.encode('ascii')
+		col_values.append( col00 )
+	    else:
+		continue
+	keyP = select_keys[icol]
+	subset[keyP] = col_values
+    
+    # second: manage the data by EQID (group by each source) 
+    key = 'EQID'
+    eqid0s = subset[key] 
+    eqids = []   # not repeated
+    SrcGroupX = {}   # site-dependent
+    SrcGroupRD = {}   # source-dependent rake and dip
+    irow = 0
+    while irow < len(eqid0s): 
+	eqid0 = eqid0s[irow]
+	key1 = str(eqid0)
+	if eqid0 not in eqids: 
+	    eqids.append( eqid0 ) 
+	    SrcGroupX[key1] = []
+	    SrcGroupX[key1].append([subset[select_keys[3]][irow],\
+		                    subset[select_keys[4]][irow],\
+				    ])
+	    SrcGroupRD[key1] = [ subset[select_keys[1]][irow],\
+		                 subset[select_keys[2]][irow],
+				 subset[select_keys[5]][irow],\
+				 subset[select_keys[6]][irow],\
+			         subset[select_keys[7]][irow],]
+	else: 
+	    SrcGroupX[key1].append([subset[select_keys[3]][irow],\
+		                     subset[select_keys[4]][irow],\
+				    ])
+	irow += 1
+
+    SrcAveRD_XY = []
+    EQkeys = SrcGroupRD.keys()
+
+    for isrc in xrange( len(EQkeys) ):
+	key1 = EQkeys[isrc] 
+	dip = SrcGroupRD[key1][0] * np.pi/ 180. 
+	W = SrcGroupRD[key1][2]
+	HypoDepth = SrcGroupRD[key1][3]
+	Ztor = SrcGroupRD[key1][4]
+	
+	# Compute HypoY (based on W, dip, HypoDepth, and Ztor) 
+	Y = 1-(HypoDepth-Ztor)/(W*np.sin(dip))
+	if Y < 0: 
+	    continue
+	    #print 'EQID', 'HypoDepth', 'Ztor','W','Dip'
+	    #print key1, HypoDepth, Ztor, W, dip*180./np.pi
+        if Y < 0.1: 
+	    print 'EQID', 'HypoDepth', 'Ztor','W','Dip'
+	    print key1, HypoDepth, Ztor, W, dip*180./np.pi
+	
+	# first find the correct sites to do the average:
+	Xs = []; Ys = []
+	for isite in xrange( len(SrcGroupX[key1]) ): 
+	    az = SrcGroupX[key1][isite][0]
+	    X = SrcGroupX[key1][isite][1]
+	    
+	    # set the starting point of strike vector 
+	    # and starting point of the up-dip vector 
+	    # as the origin:
+	    if az in [90,-90]:
+		continue
+	    elif 0 <= az < 90 or -90 < az < 0:
+		Xs.append( 1-X )   
+		Ys.append( Y )
+	    elif 90 < az <= 180 or -180 <= az < 90: 
+		Xs.append( X )
+		Ys.append( Y )
+
+	# second, find the largest
+	try:
+	    AbsX = max(Xs)
+	    AbsY = max(Ys)
+	    rake = SrcGroupRD[key1][1]
+	    if -180<=rake<-150 or -30<rake<30 or 150<rake<=180: 
+		# strike-slip events
+		Fss = 1
+	    else: 
+		# dip-slip events
+		Fss = 0 
+	    SrcAveRD_XY.append([Fss, AbsX, AbsY])
+        except: 
+	    continue
+
+    SrcAveRD_XY = np.array( SrcAveRD_XY ) 
+
+    # plot historgram X,Y scatter with histogram 
+    import matplotlib.pyplot as plt
+    plt.rc('font',family='Arial')
+    nbar = 10
+    clr = 'b' 
+    pfmt = 'eps'
+
+    # all events
+    Xs = SrcAveRD_XY[:,1]
+    Ys = SrcAveRD_XY[:,2]
+    
+    fig = plt.figure(1,(8,6)) 
+    ax1 = fig.add_axes([0.45,0.35,0.5,0.5])
+    ax2 = fig.add_axes([0.45,0.05,0.5,0.2])
+    ax3 = fig.add_axes([0.05,0.35,0.3,0.5])
+    ax1.plot( Xs,Ys, 'ro', mfc='none')
+    ax1.set_xlabel('AlongStrikeHypoX')
+    ax1.set_ylabel('UpDipHypoY')
+    ax1.set_title('AllEvents (%s)'%(len(Xs)) ) 
+
+    ax2.hist( Xs, nbar, normed=0, color=clr )
+    ax2.xaxis.set_label_position('top')
+    ax2.invert_yaxis()
+    ax2.xaxis.set_ticks([])
+    ax3.hist( Ys, nbar, normed=0, color=clr, orientation='horizontal' )
+    ax3.yaxis.set_ticks([]) 
+    ax3.invert_xaxis() 
+    fig.savefig('./plots/AllEventsHypoDistribution.%s'%pfmt,format=pfmt)
+    
+    # strike-slip events
+    index = (SrcAveRD_XY[:,0] == 1).nonzero()[0]
+    Xs = SrcAveRD_XY[index,1]
+    Ys = SrcAveRD_XY[index,2]
+
+    fig.clf()
+    ax1 = fig.add_axes([0.45,0.35,0.5,0.6])
+    ax2 = fig.add_axes([0.45,0.05,0.5,0.2])
+    ax3 = fig.add_axes([0.05,0.35,0.3,0.6])
+    ax1.plot( Xs,Ys, 'ro', mfc='none')
+    ax1.set_xlabel('AlongStrikeHypoX')
+    ax1.set_ylabel('UpDipHypoY')
+    ax1.set_title('Strike-Slip Events (%s)'%(len(Xs)) ) 
+
+    ax2.hist( Xs, nbar, normed=0, color=clr )
+    ax2.xaxis.set_label_position('top')
+    ax2.invert_yaxis()
+    ax2.xaxis.set_ticks([])
+    ax3.hist( Ys, nbar, normed=0, color=clr,orientation='horizontal' )
+    ax3.yaxis.set_ticks([]) 
+    ax3.invert_xaxis() 
+    fig.savefig('./plots/SSEventsHypoDistribution.%s'%pfmt,format=pfmt)
+    
+    # non-strike-slip
+    index = (SrcAveRD_XY[:,0] == 0).nonzero()[0]
+    Xs = SrcAveRD_XY[index,1]
+    Ys = SrcAveRD_XY[index,2]
+    
+    fig.clf()
+    ax1 = fig.add_axes([0.45,0.35,0.5,0.6])
+    ax2 = fig.add_axes([0.45,0.05,0.5,0.2])
+    ax3 = fig.add_axes([0.05,0.35,0.3,0.6])
+    ax1.plot( Xs,Ys, 'ro', mfc='none')
+    ax1.set_xlabel('AlongStrikeHypoX')
+    ax1.set_ylabel('UpDipHypoY')
+    ax1.set_title('Non Strike-Slip Events (%s)'%(len(Xs)) ) 
+
+    ax2.hist( Xs, nbar, normed=0, color=clr)
+    ax2.xaxis.set_label_position('top')
+    ax2.invert_yaxis()
+    ax2.xaxis.set_ticks([])
+    ax3.hist( Ys, nbar, normed=0, color=clr, orientation='horizontal' )
+    ax3.yaxis.set_ticks([]) 
+    ax3.invert_xaxis() 
+    fig.savefig('./plots/NonSSEventsHypoDistribution.%s'%pfmt,format=pfmt)
+    #plt.show() 
+
+
+
 # ====================
 # self_application
 # ====================
@@ -402,13 +606,17 @@ if __name__ == '__main__':
     
     import sys
     opt = sys.argv[1]
-    rules_type = sys.argv[2]   # read from file or defined by user in the process
+    xlsfile = './NGAdata/NGA_Flatfile.xls'
+
+    if opt == 'HypoL': 
+	HypocenterDistribution(xlsfile)
 
     if opt == 'GetSubset':
 	
+	rules_type = sys.argv[2]   # read from file or defined by user in the process
+	
 	# Read the original NGA flatfile
-	file = './NGAdata/NGA_Flatfile.xls'
-	nga_flats, nga_IMs = ReadFlatFileNGA(file)    # for all nga_flats
+	nga_flats, nga_IMs = ReadFlatFileNGA(xlsfile)    # for all nga_flats
 
         # =======================================
         # Subset database generation

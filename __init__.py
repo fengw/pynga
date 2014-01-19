@@ -9,10 +9,16 @@ import BA08
 import CY08
 import AS08
 import SC08
+
+import BSSA14
+import CB14 
+import CY14 
+import ASK14 
+
 from utils import *
 
 
-# Period list (available for each NGA models) 
+# NGA08 Period list (available for each NGA models) 
 # -1.0: PGA; -2.0: PGV
 TsDict = {
 	'BA': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
@@ -25,8 +31,9 @@ TsDict = {
 	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
 	}
 
-
-# Compute NGAs (You can use your coefficients and term flags)
+# ============================================
+# Integrated function for NGA 2014 models 
+# ============================================
 def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	  rake=None, Mech=3, Ftype=None, Fnm=None, Frv=None, \
 	  dip=None, W=None, Ztor=None, Zhypo=None, Fas=0, \
@@ -142,172 +149,54 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	raise ValueError
 
     if model_name == 'BA':
-	
-	BAnga = BA08.BA08_nga()
-	kwds = {'rake':rake,'Mech':Mech,'Ftype':Ftype,'AB11':AB11, 'CoefTerms':dict1[model_name]}   # OpenSHA doesn't have this
-	
-	periods = np.array(BAnga.periods)
-	for ip in xrange( len(periods) ):
-	    if abs( period-periods[ip] ) < 0.0001:
-		# period is within the periods list
-		itmp = 1
-		break
-
-	if itmp == 1:
-	    # compute median, std directly for the existing period in the period list of the NGA model
-	    values = mapfunc( BAnga, Mw, Rjb, Vs30, period, **kwds )
-	    values = np.array( values )
-
-	if itmp == 0:
-	    # do the interpolation for periods that is not in the period list of the NGA model
-	    ind_low = (periods < period).nonzero()[0]
-	    ind_high = (periods > period).nonzero()[0]
-
-	    period_low = max( periods[ind_low] )
-	    period_high = min( periods[ind_high] )
-	    
-	    values_low = np.array( mapfunc( BAnga, Mw, Rjb, Vs30, period_low, **kwds ) )
-	    values_high = np.array( mapfunc( BAnga, Mw, Rjb, Vs30, period_high, **kwds ) )
-	    
-	    N1,N2 = np.array( values_low).shape
-	    
-	    values = np.zeros( (N1,N2) )
-	    for icmp in xrange( N2 ):
-		if icmp != 0:
-		    # stardand values are in ln (g)
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
-		else:
-		    # median value is in g
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
-                    values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
-
+	ngaM = BA08.BA08_nga()
+	kwds = {'Mech':Mech,'Ftype':Ftype,'AB11':AB11, 'CoefTerms':dict1[model_name]}   # OpenSHA doesn't have this
     if model_name == 'CB':
-	
-	CBnga = CB08.CB08_nga()
+	ngaM = CB08.CB08_nga()
 	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Z15':Z15,'Arb':ArbCB,'CoefTerms':dict1[model_name]}
-	
-	periods = np.array(CBnga.periods)
-	for ip in xrange( len(periods) ):
-	    if abs( period-periods[ip] ) < 0.0001:
-		# period is within the periods list
-		itmp = 1
-		break
-
-	if itmp == 1:
-	    values = mapfunc( CBnga, Mw, Rjb, Vs30, period, rake, **kwds )
-	    values = np.array( values )
-        
-	if itmp == 0:
-	    # do the interpolation for periods that is not in the period list of the NGA model
-	    ind_low =  (periods < period).nonzero()[0]
-	    ind_high = (periods > period).nonzero()[0]
-
-	    period_low = max( periods[ind_low] )
-	    period_high = min( periods[ind_high] )
-	    
-	    values_low = np.array( mapfunc( CBnga, Mw, Rjb, Vs30, period_low, rake, **kwds ) )
-	    values_high = np.array( mapfunc( CBnga, Mw, Rjb, Vs30, period_high, rake, **kwds ) )
-	    
-	    N1,N2 = np.array( values_low).shape
-	    
-	    values = np.zeros( (N1,N2) )
-	    for icmp in xrange( N2 ):
-		if icmp != 0:
-		    # stardand values are in ln (g)
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
-		else:
-		    # median value is in g
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
-                    values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
-
     if model_name == 'CY':
-	
-	CYnga = CY08.CY08_nga()
+	ngaM = CY08.CY08_nga()
 	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'AS':Fas,'VsFlag':VsFlag,'CoefTerms':dict1[model_name]}
-	
-	periods = np.array(CYnga.periods)
-	for ip in xrange( len(periods) ):
-	    if abs( period-periods[ip] ) < 0.0001:
-		# period is within the periods list
-		itmp = 1
-		break
-
-	if itmp == 1:
-	    values = mapfunc( CYnga, Mw, Rjb, Vs30, period, rake, **kwds )
-	    values = np.array( values )
-	
-	if itmp == 0:
-	    print 'Do the interpolation at period = %s for NGA model: %s'%('%.3f'%period, model_name)
-	    # do the interpolation for periods that is not in the period list of the NGA model
-	    ind_low =  (periods < period).nonzero()[0]
-	    ind_high = (periods > period).nonzero()[0]
-
-	    period_low = max( periods[ind_low] )
-	    period_high = min( periods[ind_high] )
-	    
-	    values_low = np.array( mapfunc( CYnga, Mw, Rjb, Vs30, period_low, rake, **kwds ) )
-	    values_high = np.array( mapfunc( CYnga, Mw, Rjb, Vs30, period_high, rake, **kwds ) )
-	    
-	    N1,N2 = np.array( values_low).shape
-	    
-	    values = np.zeros( (N1,N2) )
-	    for icmp in xrange( N2 ):
-		if icmp != 0:
-		    # stardand values are in ln (g)
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
-		else:
-		    # median value is in g
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
-                    values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
-
-
     if model_name == 'AS':                                                                                                                
-	ASnga = AS08.AS08_nga()
+	ngaM = AS08.AS08_nga()
 	kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Fas':Fas,'VsFlag':VsFlag, 'CoefTerms':dict1[model_name]}
 	
-	periods = np.array(ASnga.periods)
-	for ip in xrange( len(periods) ):
-	    if abs( period-periods[ip] ) < 0.0001:
-		# period is within the periods list
-		itmp = 1
-		break
-        
-	if itmp == 1:
-	    values = mapfunc( ASnga, Mw, Rjb, Vs30, period, rake, **kwds )  
-	    values = np.array( values )
-            #print period, values[22]
-	    #raw_input()
+    # Common interpolation and calculation for all models
+    periods = np.array(ngaM.periods)
+    for ip in xrange( len(periods) ):
+        if abs( period-periods[ip] ) < 0.0001:
+            # period is within the periods list
+            itmp = 1
+            break
 
-	if itmp == 0:
-	    print 'Do the interpolation at period = %s for NGA model: %s'%('%.3f'%period, model_name)
+    if itmp == 1:
+        # compute median, std directly for the existing period in the period list of the NGA model
+        values = mapfunc( ngaM, Mw, Rjb, Vs30, period, rake, **kwds )
+        values = np.array( values )
 
-	    # do the interpolation for periods that is not in the period list of the NGA model
-	    ind_low =  (periods < period).nonzero()[0]
-	    ind_high = (periods > period).nonzero()[0]
-
-	    period_low = max( periods[ind_low] )
-	    period_high = min( periods[ind_high] )
-	    
-	    values_low = np.array( mapfunc( ASnga, Mw, Rjb, Vs30, period_low, rake, **kwds ) )
-	    values_high = np.array( mapfunc( ASnga, Mw, Rjb, Vs30, period_high, rake, **kwds ) )
-	    
-	    N1,N2 = np.array( values_low).shape
-	    
-	    values = np.zeros( (N1,N2) )
-	    for icmp in xrange( N2 ):
-		if icmp != 0:
-		    # stardand values are in ln (g)
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
-		else:
-		    # median value is in g
-		    values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
-                    values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
+    if itmp == 0:
+        # do the interpolation for periods that is not in the period list of the NGA model
+        ind_low = (periods < period).nonzero()[0]
+        ind_high = (periods > period).nonzero()[0]
+        period_low = max( periods[ind_low] )
+        period_high = min( periods[ind_high] )
+        values_low = np.array( mapfunc( ngaM, Mw, Rjb, Vs30, period_low, rake, **kwds ) )
+        values_high = np.array( mapfunc( ngaM, Mw, Rjb, Vs30, period_high, rake, **kwds ) )
+        N1,N2 = np.array( values_low).shape
+        values = np.zeros( (N1,N2) )
+        for icmp in xrange( N2 ):
+            if icmp != 0:
+                # stardand values are in ln (g)
+                values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
+            else:
+                # median value is in g
+                values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
+                values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
 
     # outputs
     NGAsigmaT = values[:,1]
     NGAtau = values[:,2]
     NGAsigma = values[:,3]
-    
     if epislon: 
 	NGAmedian = np.exp( np.log(values[:,0]) + epislon * NGAsigmaT )
     else: 
@@ -319,9 +208,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 
 def BA08Test(): 
     # to reproduce BA model (shown in Earthquake Spectra 2008) 
-
     import matplotlib.pyplot as plt
-
     NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
 	  'BA':{'NewCoefs':None,'terms':(1,1,1)},\
 	  'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
@@ -349,8 +236,7 @@ def BA08Test():
     plt.show()
 
 
-
-def NGAtest(nga): 
+def NGA08test(nga): 
     # simple test comparing with file: ./Validation/NGAmodelsTestFiles/nga_Sa_v19a.xls
     M = 6.93 
     Ztor = 3 
@@ -381,14 +267,202 @@ def NGAtest(nga):
     print output 
 
 
+# NGA 14 period list
+# -1: PGA; -2: PGV
+TsDict14 = {
+	'BSSA': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],   
+	'CB': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2],    
+	'CY': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.12, 0.15, 0.17, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1],    
+	'ASK': [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
+	      0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0,-1,-2],    
+        }
+
+# ============================================
+# Integrated function for NGA 2014 models 
+# =============================================
+def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
+	  rake=None, Mech=3, Ftype=None, Fnm=None, Frv=None, \
+	  dip=None, W=None, Ztor=None, Zhypo=None, Fas=0, \
+	  Rrup=None, Rx=None, Fhw=None, azimuth=None, \
+	  VsFlag=0, Z25=None, Z15=None, Z10=None, \
+	  ArbCB=0, SJ=0, \
+          country='California', region='CA', \
+          Dregion='GlobalCATW', \
+          CRjb=15, Ry0=None, \
+          D_DPP=0 ):
+
+    if NGAs == None:
+	NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1,1,1)},\
+	      'BSSA':{'NewCoefs':None,'terms':(1,1,1)},\
+	      'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
+	      'ASK':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)}}\
+
+    dict1 = NGAs
+    itmp = 0
+    
+    # check the input period
+    # Note: this function is better used at a given period with a set of other parameters (not with a set of periods)
+    if period > 10.0 or 0<period<0.01:
+	print 'invalid period value (it should be within [0.01,10] for SA or == -1,-2 for PGA and PGV'
+	raise ValueError
+
+    if model_name == 'BSSA':
+	ngaM = BSSA14.BSSA14_nga()
+        kwds = {'rake':rake,'Mech':Mech,'Ftype':Ftype,'Z10':Z10,'Dregion':Dregion,'country':country,'CoefTerms':dict1[model_name]}
+	
+    if model_name == 'CB':
+	ngaM = CB14.CB14_nga()
+        kwds = {'Ftype':Ftype,'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Z15':Z15,'Arb':ArbCB,'SJ':SJ,'region':region,'CoefTerms':dict1[model_name]}
+	
+    if model_name == 'CY':
+	ngaM = CY14.CY14_nga()
+        kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'AS':Fas,'VsFlag':VsFlag,'country':country,'D_DPP':D_DPP,'CoefTerms':dict1[model_name]}
+	
+    if model_name == 'ASK':                                                                                                                
+	ngaM = ASK14.AS14_nga()
+        kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Fas':Fas,'CRjb':CRjb,'Ry0':Ry0,'region':region,'country':country,'VsFlag':VsFlag, 'CoefTerms':dict1[model_name]}
+	
+    # common interpolate for all models
+    periods = np.array(ngaM.periods)
+    for ip in xrange( len(periods) ):
+        if abs( period-periods[ip] ) < 0.0001:
+            # period is within the periods list
+            itmp = 1
+            break
+
+    if itmp == 1:
+        # compute median, std directly for the existing period in the period list of the NGA model
+        values = mapfunc( ngaM, Mw, Rjb, Vs30, period, rake, **kwds )
+        values = np.array( values )
+    if itmp == 0:
+        #print 'do the interpolation for periods that is not in the period list of the NGA model'
+        ind_low = (periods < period).nonzero()[0]
+        ind_high = (periods > period).nonzero()[0]
+        period_low = max( periods[ind_low] )
+        period_high = min( periods[ind_high] )
+        values_low = np.array( mapfunc( ngaM, Mw, Rjb, Vs30, period_low, rake, **kwds ) )
+        values_high = np.array( mapfunc( ngaM, Mw, Rjb, Vs30, period_high, rake, **kwds ) )
+        N1,N2 = np.array(values_low).shape
+        values = np.zeros( (N1,N2) )
+        for icmp in xrange( N2 ):
+            if icmp != 0:
+                # stardand values are in ln (g)
+                values[:,icmp] = logline( np.log(period_low), np.log(period_high), values_low[:,icmp], values_high[:,icmp], np.log(period) )
+            else:
+                # median value is in g
+                values[:,icmp] = logline( np.log(period_low), np.log(period_high), np.log(values_low[:,icmp]), np.log(values_high[:,icmp]), np.log(period) )
+                values[:,icmp] = np.exp( values[:,icmp] )    # change the median into g unit (logline gives the result in ln(g))
+
+    # outputs
+    NGAsigmaT = values[:,1]
+    NGAtau = values[:,2]
+    NGAsigma = values[:,3]
+    
+    if epislon: 
+	NGAmedian = np.exp( np.log(values[:,0]) + epislon * NGAsigmaT )
+    else: 
+	NGAmedian = values[:,0]  
+
+    # returned quantities are all in g, not in log(g), event for the standard deviations
+    return NGAmedian, np.exp( NGAsigmaT ), np.exp( NGAtau ), np.exp( NGAsigma )      # all in g, include the standard deviation
+
+
+
+def BSSA14_validation(infile, outfile, iset):
+    # read in files (mainly parameters for run using pynga) 
+    hdrs = open(infile,'r').readlines()[3].strip().split()
+    inputs = {}
+    data = np.loadtxt(infile,skiprows=4)
+    for ih in xrange(len(hdrs)): 
+        hdr = hdrs[ih]
+        inputs[hdr] = data[:,ih]
+    regionDict = {'0':'GlobalCATW','1':'GlobalCATW','2':'ChinaTurkey','3':'ItalyJapan'}
+    
+    # calculate and save to file (or plot directly) (following the same format) 
+    #fid = open(outfile,'w')
+    BSSAnga = BSSA14.BSSA14_nga()
+    Nl = len(inputs['T'])
+    Y = []; sig_lnY = []; tau = []; sigma = []
+    Nls1 = []; Nls2 = []
+    for il in xrange(Nl): 
+        for key in ['T','M','Rjb','V30', 'mech', 'iregion', 'z1']: 
+            cmd = "%s = inputs['%s'][%d]"%(key,key,il) 
+            exec(cmd)
+        Dregion = regionDict[str(int(iregion))]
+        if z1 == -1.0: Z10 = None
+        if z1 != -1.0: Z10 = z1
+        kwds = {'rake':None,'Mech':int(mech),'Dregion':Dregion,'Z10':Z10}
+        if T == -1.0: T = -2
+        if T == 0.0: T = -1 
+        if T not in TsDict14['BSSA']:
+            pass 
+        else:
+            Nls1.append(il)
+            Y0, sT, tau0, sigma0 = BSSAnga(M,Rjb,V30,T,**kwds)
+            Y.append(Y0)
+            sig_lnY.append(sT) 
+            tau.append(tau0)
+            sigma.append(sigma0)
+        Nls2.append(il)
+    pyNGAs = [Y,sig_lnY,tau,sigma]
+    pyNGAs = np.array(pyNGAs) 
+    ftNGAs = np.array([inputs['Y(g)'],inputs['sigma'],inputs['tau'],inputs['phi']])
+    
+    # plot
+    fig = plt.figure(1) 
+    texts = ['IM',r'$\sigma_T$',r'$\tau$',r'$\sigma$'] 
+    for iax in xrange( len(pyNGAs) ): 
+        ax = fig.add_subplot(2,2,iax+1)
+        ax.plot(Nls1,pyNGAs[iax],'bx', label='pyNGA')
+        ax.plot(Nls2,ftNGAs[iax],'k.', label='orgNGA')
+        ax.set_xlabel('points')
+        ax.set_ylabel('values')
+	if iax == 0:
+	    ax.legend(loc=0).draw_frame(False)
+        ax.text(0.9,0.9,texts[iax],transform=ax.transAxes) 
+    pltpth = './NGA_west2/validation/BSSA14/outputs'
+    pltnam = pltpth + '/validation_BSSA14_set%s.png'%iset
+    fig.savefig(pltnam)
+    plt.show()
+
+
+
 # ====================
 # self_application
 # ====================
 if __name__ == '__main__':
 
     import sys 
+    opt = sys.argv[1]
+    if opt == 'NGA08':
+        nga = sys.argv[2]   # choose one NGA model in NGA08 
+        NGA08test(nga)
+    
+    if opt == 'NGA14': 
+        nga = sys.argv[2]    # choose one NGA model in NGA 2014 
+        
+        if nga == 'BSSA':
+            opt1 = sys.argv[3]   # 1, 2, 3 to choose reference files
+            wrkpth = './NGA_west2/validation/BSSA14'
+            inpth = wrkpth + '/inputs'
+            outpth = wrkpth + '/outputs'
+	    if not os.path.exists(outpth): 
+		os.mkdir(outpth) 
 
-    #BA08Test()
-    NGAtest(sys.argv[1])
+	    if opt1 == '1':
+                # set 1:
+                file0 = '/bssa14_vs_period_r_20_v30_760_mech_1.out' 
+            if opt1 == '2':
+                # set 2: 
+                file0 = '/bssa14_vs_period_r_20_v30_200_mech_1.out'   # (period, magnitude, distance)
+            if opt1 == '3': 
+                # set 3: 
+                file0 = '/bssa14_vs_rjb_m_4_5_6_7_8_8.5.vs30_760_mech_1.out'   # (period, magnitude)
+            infile = inpth + file0 
+            outfile = outpth + file0
+            BSSA14_validation(infile, outfile, int(opt1)) 
 
 

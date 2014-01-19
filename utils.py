@@ -4,6 +4,7 @@ Utilities used in NGA classes
 """
 import os, time
 import numpy as np
+import matplotlib.pyplot as plt 
 
 # ===================
 # General Functions
@@ -784,7 +785,7 @@ def LonLatToAngleDistance( loc1, loc2, \
 	Loc2: lon2, lat2 in degree, dep2 in km 
     Outputs: 
 	Radius: angle between two points (central angle)
-	Azimuth1to2: azimuth (relative to north pole) from point 1 to point2
+	Azimuth1to2: azimuth (relative to north pole) from point 1 to point2, default: [-pi,pi]
 	horzDistance: distance between two points (great circle along spherical surface, km)
 	vertDistance: distance between two points vertically
     Angles in radius

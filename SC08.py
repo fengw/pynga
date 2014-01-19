@@ -171,3 +171,5 @@ class SC08_model:
 	
 	return np.exp(fD + a0)
 
+
+

@@ -162,6 +162,7 @@ if plot_prefix is not None:
     from mpl_toolkits.mplot3d import Axes3D
     vertsClosed = FaultTrace + [FaultTrace[0]]
     verts1 = np.array(vertsClosed)
+    plt.rc('font',family='Arial')
     fig = plt.figure(1) 
     ax = fig.add_subplot(111)
     img = ax.scatter(LocS0[:,0], LocS0[:,1],

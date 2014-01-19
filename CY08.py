@@ -485,8 +485,8 @@ def CY08nga_test(T,CoefTerms):
     Rx = 20.0
     Ztor= 0.64274240
     dip = 45
-    Z10 = 1000.0
     Z10 = None
+    Z10 = 1000.0
     AS = 0
     VsFlag = 0
 
@@ -502,14 +502,17 @@ def CY08nga_test(T,CoefTerms):
 
 if __name__ == '__main__':
 
-    T = 0.1; NewCoefs=None
     T = 0.1; NewCoefs={'c1':-0.5747, 'c1a':0.1}
     T = 0.1; NewCoefs={'c1':-0.6747, 'c1a':0.1}
-    
+    NewCoefs = None
     CoefTerms = {'terms':(1,1,1,1,1,1),'NewCoefs':NewCoefs}
-    print 'CY SA at %s'%('%3.2f'%T)
-    CYnga = CY08nga_test(T,CoefTerms)
-    
+    Z10 = 1000
+    Ts = [3.0, 5.0, 10.0]
+    for T in Ts:
+	print 'CY SA at %s'%('%3.2f'%T)
+	CYnga = CY08nga_test(T,CoefTerms)
+        print CYnga.basin_function(Z10=Z10,Tother=T) 
+
     #T = -1.0
     #print 'CY PGA:'
     #CYnga = CY08nga_test(T)

@@ -143,7 +143,7 @@ class BA08_nga:
         self.fault = ['unspecified','strike-slip','normal','reverse','U','NM','SS','RV']
 
 
-    def __call__( self,M,Rjb,Vs30,T,rake=None,Mech=3, Ftype=None, AB11=None,CoefTerms={'terms':(1,1,1),'NewCoefs':None}):
+    def __call__( self,M,Rjb,Vs30,T,rake, Mech=3, Ftype=None, AB11=None,CoefTerms={'terms':(1,1,1),'NewCoefs':None}):
 	"""
 	Compute IM for single period
 	required inputs:
@@ -418,18 +418,18 @@ def BA08nga_test(T,CoefTerms):
     Test BA features
     """
     # input parameter list
-    Rjb = 0
     Rjb = 200.
+    Rjb = 0
     Vs30 = 748.0,1200.,345.,160.
-    Vs30 = 300.
-    Mw = 5.
-    AB11 = 1
-    rake=180.
+    Vs30 = 760.
+    Mw = 8.0
+    AB11 = 0
     rake = None
-    Ftype='U'
-    kwds = {'rake':rake,'Mech':None,'Ftype':Ftype,'AB11':AB11,'CoefTerms':CoefTerms}
+    Ftype = None
+    rake=90
+    kwds = {'Mech':None,'Ftype':Ftype,'AB11':AB11,'CoefTerms':CoefTerms}
     BAnga = BA08_nga()    # BA08nga instance
-    values = mapfunc( BAnga, Mw, Rjb, Vs30, T, **kwds )
+    values = mapfunc( BAnga, Mw, Rjb, Vs30, T, rake, **kwds )
 
     for ivalue in xrange( len(values) ):
 	print values[ivalue]

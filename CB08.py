@@ -246,7 +246,7 @@ class CB08_nga():
     # ============================
     # Function used in this class
     # ============================
-    def moment_function(self,Tother=None):
+    def moment_function(self,M=None,Tother=None):
 	"""
 	Moment term
 	"""
@@ -260,6 +260,9 @@ class CB08_nga():
 	c2 = self.Coefs[Ti]['c2']
 	c3 = self.Coefs[Ti]['c3']
 	
+	if M != None: 
+	    self.M = M 
+	
 	if self.M <= 5.5:
 	    return c0 + c1 * self.M
 	elif 5.5<self.M<=6.5:
@@ -268,7 +271,7 @@ class CB08_nga():
 	    return c0 + c1 * self.M + c2 * (self.M-5.5) + c3*(self.M-6.5)
 
 
-    def distance_function(self,Tother=None):
+    def distance_function(self,M=None,Rrup=None,Tother=None):
 	"""
 	Distance term
 	"""
@@ -276,6 +279,10 @@ class CB08_nga():
 	    Ti = GetKey( Tother )
 	else:
 	    Ti = GetKey( self.T )
+        if M != None: 
+	    self.M = M 
+	if Rrup != None: 
+	    self.Rrup = Rrup 
 
 	c4 = self.Coefs[Ti]['c4']
 	c5 = self.Coefs[Ti]['c5']
@@ -284,6 +291,7 @@ class CB08_nga():
 	Rtmp = np.sqrt( self.Rrup**2 + c6**2)
 	return (c4+c5*self.M)*np.log(Rtmp)
     
+
     def fault_function(self,Tother=None):
 	"""
 	Fault mechanism term
@@ -495,20 +503,26 @@ def CB08nga_test(T, CoefTerms):
     """
     Test CB nga model
     """
-    M = 7.75
-    Vs30 = 748.0,1200.,345.,160.
+    M = 7.8
+    M = 7.1
+    Vs30 = 748.0,1200.,345.,
+    Vs30 = 760.
     #Vs30 = c(748.0,1200.,345.,160.)
 
     rake = 180    # for specific rupture
     Rjb = 89.29556987791884
-    
+    Rjb = 0.0
     Rrup = 89.29569802587626 
+    Rrup = 1.5
     Z25 = 0.30726467895507814  # in km
+    Z25 = 0.0
     Ztor= 0.64274240 
-    dip = 79.39554 
+    Ztor = 1.0
+    Ztor = 0
+    dip = 60
     
-    Ftype = 'SS'
-    rake = None 
+    Ftype = 'RV'
+    rake = 90
     Arb = 0
     W = 5.0
 
@@ -527,9 +541,10 @@ if __name__ == '__main__':
     T = 2.0; NewCoefs = {'c1':1.7,'c2':-0.648}
     T = 2.0; NewCoefs = None
     CoefTerms = {'terms':(1,1,1,1,1,1),'NewCoefs':NewCoefs}
-
-    print 'CB SA at %s'%('%3.2f'%T)
-    CBnga = CB08nga_test(T,CoefTerms)
+    Ts = [2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+    for T in Ts:
+	print 'CB SA at %s'%('%3.2f'%T)
+	CBnga = CB08nga_test(T,CoefTerms)
     T = -1.0
     print 'CB PGA'
     CBnga = CB08nga_test(T,CoefTerms)
