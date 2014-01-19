@@ -8,10 +8,11 @@ LICENSE:
 DESCRIPTION 
     The Next Generation Attenuation (NGA) 2008 Ground Motion Prediction Equations
     This package could be extended to include more ground motion predition models and 
-    include updated NGA models 
+    include updated NGA models. 
+    On Jan 18, 2014, Feng Wang added four NGA-west2 models: BSSA14, CB14, CY14, and ASK14.
 
 COMPONENTS
-    0. combination of all NGA models 
+    0. combination of all NGA models (including NGA08 and NGA14)
        __init__.py 
 	   It can deal with periods that are not in the existing period list (interpolation)
 	   default period list (Different models have different list): 
@@ -24,8 +25,8 @@ COMPONENTS
 	    'AS': [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.10, 0.15, 0.20, 0.25,
 		  0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0,-1,-2], 
 
-    1. Four NGA models (details)
-       AS08.py, BA08.py, CB08.py, CY08.py 
+    1. Available NGA models (details)
+       AS08.py, BA08.py, CB08.py, CY08.py, ASK14.py, BSSA14.py, CB14.py, CY14.py 
 	   Basic required inputs: 
 	       T    : Period  
 	       Mw   : Magnitude 
@@ -54,13 +55,17 @@ COMPONENTS
     4. NGA dataset (original datafiles used for regression to obtain the NGA models)
        ./NGAdata/NGA_Flatfile.xls 
     
-    5. Validation of pynga
+    5. Validation of NGA08 model in pynga
        ./Validation, the pynga is validated with OpenSHA (discussion with Christine), and the distance calculation
        utilities are validated with OpenSHA
        ./Validation/plots/ValidationNGAs/ show the NGA calculation comparison results (within 0.02% for PGA and SA at various periods)
        ./Validation/plots/ValidationDistances/ show the distance calculation comparison (within 1km)
-  
-    6. Applications of pynga in Fling Study (basis for broadband application of pynga)
+    
+    6. Validation of NGA14 model in pynga 
+       BSSA14 was validated using outputs from Boore et al. 2014, and the code is in __init__.py  (simply run __init__.py NGA14 BSSA 1 [2,3]) there are 3 sets for validation 
+       Other three models will validated soon. 
+
+    7. Applications of pynga in Fling Study (basis for broadband application of pynga)
        ./FlingStudy (similar to BBP, src read, distance calculation and GMPEs results)
        ./BBP ( simple workflow for BBP Part B GMPE comparisons with simulation results ) 
 
