@@ -204,11 +204,11 @@ class ASK14_nga:
         c4M = c4*(self.M>5) + (c4-(c4-1)*(5-self.M))*(4<self.M<=5) + 1*(self.M<=4)
 	Rtmp = np.sqrt(self.Rrup**2+c4M**2)
         if self.M < self.M2:
-            output = a1 + a4*(self.M2-M1) + a8*(8.5-self.M2)**2 + \
-                    a6*(self.M-self.M2) + a7*(self.M-self.M2)**2 + \
+            output = a1 + self.a4*(self.M2-M1) + a8*(8.5-self.M2)**2 + \
+                    a6*(self.M-self.M2) + self.a7*(self.M-self.M2)**2 + \
                     (a2+a3*(self.M2-M1))*np.log(Rtmp) + a17*self.Rrup 
         elif self.M2 <= self.M < M1:
-            output = a1 + a4*(self.M-M1) + a8*(8.5-self.M)**2 + \
+            output = a1 + self.a4*(self.M-M1) + a8*(8.5-self.M)**2 + \
                     (a2+a3*(self.M-M1))*np.log(Rtmp) + a17*self.Rrup 
         elif self.M > M1: 
             output = a1 + self.a5*(self.M-M1) + a8*(8.5-self.M)**2 + \
