@@ -42,7 +42,8 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	  AS09=None, AB11=None, ArbCB=0 ):
     """
     Combined function to compute median and standard deviation
-    
+    Provide GMRotI50 
+
     Arguments (has to be specified)
     ----------
     model_name : choose NGA model you want to use (AS,BA,CB,CY) 
@@ -296,6 +297,8 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
           Dregion='GlobalCATW', \
           CRjb=15, Ry0=None, \
           D_DPP=0 ):
+
+    # provide RotD50 
 
     if NGAs == None:
 	NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1,1,1)},\

@@ -299,7 +299,8 @@ class ASK14_nga:
 
             # taper5 (constrain azimuthally)
             Ry1 = self.Rx*np.tan(20*np.pi/180.)
-            if self.Ry0 != None: 
+	    # note: Ry0 can be computed by Rx*|tan(Src2SiteAzimuth)|
+	    if self.Ry0 != None: 
                 if self.Ry0 < Ry1: 
                     taper5 = 1.0
                 elif self.Ry0-Ry1 < 5: 
@@ -435,22 +436,24 @@ class ASK14_nga:
             cmd = "%s = self.Coefs['%s']['%s']"%(key,Ti,key) 
             exec(cmd)
         
-        if self.region == 'CA': 
+	V1, Vs30_1 = self.CalcVs30Star(Vs30,T)
+        
+	if self.region == 'CA': 
             return 0.0 
         elif self.region == 'TW': 
-            f11 = a31*np.log(Vs30/Vlin)
-            return f11+a25*Rrup
+            f12 = a31*np.log(Vs30_1/Vlin)
+            return f12+a25*Rrup
         elif self.region == 'CN': 
             return a28*Rrup
         elif self.region == 'JP': 
-            f12 = a36*(Vs30<200) + \
+            f13 = a36*(Vs30<200) + \
                     a37*(200<=Vs30<300) + \
                     a38*(300<=Vs30<400) + \
                     self.a39*(400<=Vs30<500) + \
                     a40*(500<=Vs30<700) + \
                     a41*(700<=Vs30<1000) + \
                     a42*(Vs30>=1000)
-            return f12 + a29*Rrup 
+            return f13 + a29*Rrup 
 
     # function to compute the intensity
     def logline(self,x1,x2,y1,y2,x):
