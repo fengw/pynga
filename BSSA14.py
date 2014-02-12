@@ -333,10 +333,10 @@ def BSSA14nga_test(T,CoefTerms):
     """
     # input parameter list
     Rjb = 0
-    Rjb = 20.
+    Rjb = np.arange(1,200,5)
     Vs30 = 748.0,1200.,345.,160.
     Vs30 = 760.
-    Mw = 3.
+    Mw = 4.
 
     rake=180.
     rake = 0.
@@ -344,10 +344,10 @@ def BSSA14nga_test(T,CoefTerms):
     Mech = 1
     kwds = {'Mech':Mech,'Ftype':Ftype, 'Z10':None, 'Dregion':'GlobalCATW', 'country':'California', 'CoefTerms':CoefTerms}
     BSSAnga = BSSA14_nga()    # BA08nga instance
-    if 0:
+    if 1:
         values = mapfunc( BSSAnga, Mw, Rjb, Vs30, T, rake, **kwds )
         for ivalue in xrange( len(values) ):
-            print values[ivalue]
+            print Rjb[ivalue], values[ivalue]
     else: 
         # debug mode (show each term)
         IM, sigmaT, tau, sigma = BSSAnga(Mw,Rjb,Vs30,T,rake, **kwds)
@@ -357,13 +357,10 @@ def BSSA14nga_test(T,CoefTerms):
 
 if __name__ == '__main__':
     import sys 
-    T = 0.01; NewCoefs = None     # pure one
+    T = 0.3; NewCoefs = None     # pure one
     print 'BA SA at %s second'%('%3.2f'%T)
     CoefTerms={'terms':(1,1,1),'NewCoefs':NewCoefs}
     BSSAnga = BSSA14nga_test(T,CoefTerms)
-    print 'moment term:', BSSAnga.moment_function() 
-    print 'distance term:', BSSAnga.distance_function() 
-    print 'soil term:', BSSAnga.soil_function() 
 
     T = -1.0
     CoefTerms={'terms':(1,1,1),'NewCoefs':None}

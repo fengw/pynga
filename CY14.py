@@ -21,7 +21,7 @@ class CY14_nga:
         self.cRB = 50 
         self.c8 = 0.2153
         self.c8a = 0.2695 
-
+        
 
     def ReadModelCoefs(self): 
         self.CoefKeys = open(self.CoefFile,'r').readlines()[1].strip().split(',')[1:]

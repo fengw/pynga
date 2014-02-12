@@ -503,28 +503,21 @@ def CB08nga_test(T, CoefTerms):
     """
     Test CB nga model
     """
-    M = 7.8
-    M = 7.1
+    M = 4.0
     Vs30 = 748.0,1200.,345.,
     Vs30 = 760.
     #Vs30 = c(748.0,1200.,345.,160.)
 
-    rake = 180    # for specific rupture
-    Rjb = 89.29556987791884
-    Rjb = 0.0
-    Rrup = 89.29569802587626 
-    Rrup = 1.5
-    Z25 = 0.30726467895507814  # in km
-    Z25 = 0.0
-    Ztor= 0.64274240 
-    Ztor = 1.0
-    Ztor = 0
-    dip = 60
+    Z25 = None
+    Ztor = 3
+    dip = 90
     
-    Ftype = 'RV'
-    rake = 90
+    Rjb = np.arange(1,200,5)
+    Rrup = Rjb
+    Ftype = 'SS'
+    rake = 0
     Arb = 0
-    W = 5.0
+    W = 10.
 
     # How to use it
     CBnga = CB08_nga()
@@ -532,7 +525,7 @@ def CB08nga_test(T, CoefTerms):
     values = mapfunc( CBnga, M, Rjb, Vs30, T, rake,**kwds )
 
     for i in xrange( len(values) ):
-	print values[i]
+	print Rrup[i], values[i]
 
     return CBnga
 
@@ -542,6 +535,7 @@ if __name__ == '__main__':
     T = 2.0; NewCoefs = None
     CoefTerms = {'terms':(1,1,1,1,1,1),'NewCoefs':NewCoefs}
     Ts = [2.0, 3.0, 4.0, 5.0, 7.5, 10.0]
+    Ts = [0.3]
     for T in Ts:
 	print 'CB SA at %s'%('%3.2f'%T)
 	CBnga = CB08nga_test(T,CoefTerms)

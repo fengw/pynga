@@ -210,7 +210,7 @@ class ASK14_nga:
         elif self.M2 <= self.M < M1:
             output = a1 + self.a4*(self.M-M1) + a8*(8.5-self.M)**2 + \
                     (a2+a3*(self.M-M1))*np.log(Rtmp) + a17*self.Rrup 
-        elif self.M > M1: 
+        elif self.M >= M1: 
             output = a1 + self.a5*(self.M-M1) + a8*(8.5-self.M)**2 + \
                     (a2+a3*(self.M-M1))*np.log(Rtmp) + a17*self.Rrup 
 	return output 
@@ -229,7 +229,7 @@ class ASK14_nga:
         
         f7  = a11*(self.M>5) + a11*(self.M-4)*(4<self.M<=5) + 0*(self.M<=4)
         f8  = a12*(self.M>5) + a12*(self.M-4)*(4<self.M<=5) + 0*(self.M<=4)
-        f11 = a14*(self.CRjb<=5) + a14*(5<self.CRjb<=15) + 0*(self.CRjb>15)
+        f11 = a14*(self.CRjb<=5) + a14*(1-(self.CRjb-5)/10.)*(5<self.CRjb<=15) + 0*(self.CRjb>15)
         
         output = self.Frv*f7 + self.Fnm*f8 + self.Fas*f11 
 	return output 

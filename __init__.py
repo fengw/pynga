@@ -35,7 +35,7 @@ TsDict = {
 # Integrated function for NGA 2014 models 
 # ============================================
 def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
-	  rake=None, Mech=3, Ftype=None, Fnm=None, Frv=None, \
+	  rake=None, Mech=0, Ftype=None, Fnm=None, Frv=None, \
 	  dip=None, W=None, Ztor=None, Zhypo=None, Fas=0, \
 	  Rrup=None, Rx=None, Fhw=None, azimuth=None, \
 	  VsFlag=0, Z25=None, Z15=None, Z10=None, \
@@ -124,7 +124,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
     # =================
     AS09 : Abrahamson and Silva 2009 updated model (taper5 hanging wall effect) [None]
     AB11 : Atkinson and Boore 2011 updated model with correction term (after more small magnitude events recordings)
-    
+           Attention to this (when compare with BSSA14)
     # =================
     # Other Keywords 
     # =================
@@ -330,6 +330,9 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	# the new CY model treat PGA = SA(0.01)
 	if period == -1: 
 	    period = 0.01 
+	if period == -2: 
+	    print "CY14 doesn't compute PGV"
+	    raise ValueError
 
     if model_name == 'ASK':                                                                                                                
 	ngaM = ASK14.ASK14_nga()
@@ -349,7 +352,7 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
         values = np.array( values )
 
     if itmp == 0:
-	print 'do the interpolation for periods that is not in the period list of the NGA model'
+	#print 'do the interpolation for periods that is not in the period list of the NGA model'
         ind_low = (periods <= period*1.0).nonzero()[0]
         ind_high = (periods >= period*1.0).nonzero()[0]
         
@@ -526,7 +529,7 @@ def PlotTest():
         ax.legend(loc=0)       
         ax.set_xlabel('period') 
         ax.set_ylabel('SA (g)') 
-    fig.savefig(pth+'/Comparisons%s.png'%nga2[i]) 
+    fig.savefig(pth+'/ComparisonsNGA08_NGA14.png') 
 
 # ====================
 # self_application
