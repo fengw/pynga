@@ -292,7 +292,7 @@ class CY14_nga:
         else: 
             # for other region, just use default California
             MeanLnZ10 = -7.15/4. * np.log((Vs30**4+571.**2)/(1360.**4+571.**4))
-        return np.exp(MeanLnZ10)  
+        return np.exp(MeanLnZ10)/1000.
     
 
     def basin_function(self,Z10=None,Tother=None):
