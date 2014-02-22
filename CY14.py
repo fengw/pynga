@@ -286,12 +286,12 @@ class CY14_nga:
         if Vs30 == None: 
             Vs30 = self.Vs30 
         if country == 'California': 
-            MeanLnZ10 = -7.15/4. * np.log((Vs30**4+571.**2)/(1360.**4+571.**4))
+            MeanLnZ10 = -7.15/4. * np.log((Vs30**4+571.**4)/(1360.**4+571.**4))
         elif country == 'Japan': 
             MeanLnZ10 = -5.23/2. * np.log((Vs30**2+412.**2)/(1360.**2+412.**2))
         else: 
             # for other region, just use default California
-            MeanLnZ10 = -7.15/4. * np.log((Vs30**4+571.**2)/(1360.**4+571.**4))
+            MeanLnZ10 = -7.15/4. * np.log((Vs30**4+571.**4)/(1360.**4+571.**4))
         return np.exp(MeanLnZ10)/1000.
     
 
