@@ -3,6 +3,8 @@
 # when you import pynga
 # what it does is to do the following statements
 
+# Note: NGA08 provides GMRotI50, while NGA14 provides RotD50, so before do the comparison, do the conversion
+
 # Package content
 import CB08
 import BA08
@@ -16,7 +18,6 @@ import CY14
 import ASK14 
 
 from utils import *
-
 
 # NGA08 Period list (available for each NGA models) 
 # -1.0: PGA; -2.0: PGV
@@ -42,8 +43,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	  AS09=None, AB11=None, ArbCB=0 ):
     """
     Combined function to compute median and standard deviation
-    Provide GMRotI50 
-
+    
     Arguments (has to be specified)
     ----------
     model_name : choose NGA model you want to use (AS,BA,CB,CY) 
@@ -125,7 +125,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
     # =================
     AS09 : Abrahamson and Silva 2009 updated model (taper5 hanging wall effect) [None]
     AB11 : Atkinson and Boore 2011 updated model with correction term (after more small magnitude events recordings)
-           Attention to this (when compare with BSSA14)
+    
     # =================
     # Other Keywords 
     # =================
@@ -179,7 +179,7 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
         values = np.array( values )
 
     if itmp == 0:
-        # do the interpolation for periods that is not in the period list of the NGA model
+        print period, 'do the interpolation for periods that is not in the period list of the NGA model'
         ind_low = (periods < period).nonzero()[0]
         ind_high = (periods > period).nonzero()[0]
         period_low = max( periods[ind_low] )
@@ -210,9 +210,9 @@ def NGA08(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
     return NGAmedian, np.exp( NGAsigmaT ), np.exp( NGAtau ), np.exp( NGAsigma )      # all in g, include the standard deviation
 
 
-def BA08Test(): 
+def BA08Test(T): 
     # to reproduce BA model (shown in Earthquake Spectra 2008) 
-    import matplotlib.pyplot as plt
+    #import matplotlib.pyplot as plt
     NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
 	  'BA':{'NewCoefs':None,'terms':(1,1,1)},\
 	  'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1)},\
@@ -221,20 +221,20 @@ def BA08Test():
     # validation with BA
     nga = 'BA'
     Mws = [5,6,7,8]
+    Mws = [4,]
     Vs30 = 760
     FT = 'U'
     Rjb = np.arange( 0.1, 100, 0.5 )
-    T = 3.0 
     
     fig = plt.figure(1) 
     ax = fig.add_subplot( 111 )
     lines = []
     for Mw in Mws:
-	median, std, tau, sigma = NGA08( nga, Mw, Rjb, Vs30, T, Mech=3, NGAs=NGAs )
+	median, std, tau, sigma = NGA08( nga, Mw, Rjb, Vs30, T, Mech=1, NGAs=NGAs )
 	line = ax.loglog( Rjb, median*100 * 9.8 )
         lines.append( line )
     ax.legend( lines, ('M=5','M=6','M=7','M=8'), loc=0 )
-    ax.set_title(r"$V_{S30}$ = 760 m/s, mech='U'")
+    ax.set_title(r"T=%s, $V_{S30}$ = 760 m/s, mech='SS'"%('%.2f'%T))
     ax.set_xlabel( r'$R_{JB}$ (km)' )
     ax.set_ylabel( r'5%-damped PSA (cm/s)' )
     plt.show()
@@ -298,8 +298,6 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
           CRjb=15, Ry0=None, \
           D_DPP=0 ):
 
-    # provide RotD50 
-
     if NGAs == None:
 	NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1,1,1)},\
 	      'BSSA':{'NewCoefs':None,'terms':(1,1,1)},\
@@ -321,26 +319,22 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
     if model_name == 'BSSA':
 	ngaM = BSSA14.BSSA14_nga()
         kwds = {'Mech':Mech,'Ftype':Ftype,'Z10':Z10,'Dregion':Dregion,'country':country,'CoefTerms':dict1[model_name]}
-	
+
     if model_name == 'CB':
 	ngaM = CB14.CB14_nga()
         kwds = {'Ftype':Ftype,'Rrup':Rrup,'Ztor':Ztor,'dip':dip,'Z25':Z25,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Z15':Z15,'Arb':ArbCB,'SJ':SJ,'region':region,'CoefTerms':dict1[model_name]}
-	
+
     if model_name == 'CY':
 	ngaM = CY14.CY14_nga()
         kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'AS':Fas,'VsFlag':VsFlag,'country':country,'D_DPP':D_DPP,'CoefTerms':dict1[model_name]}
-	
 	# the new CY model treat PGA = SA(0.01)
 	if period == -1: 
 	    period = 0.01 
-	if period == -2: 
-	    print "CY14 doesn't compute PGV"
-	    raise ValueError
 
     if model_name == 'ASK':                                                                                                                
 	ngaM = ASK14.ASK14_nga()
         kwds = {'Ftype':Ftype,'Rrup':Rrup,'Rx':Rx,'Ztor':Ztor,'dip':dip,'W':W,'Zhypo':Zhypo,'azimuth':azimuth,'Fhw':Fhw,'Z10':Z10,'Fas':Fas,'CRjb':CRjb,'Ry0':Ry0,'region':region,'country':country,'VsFlag':VsFlag, 'CoefTerms':dict1[model_name]}
-	
+
     # common interpolate for all models
     periods = np.array(ngaM.periods)
     for ip in xrange( len(periods) ):
@@ -534,6 +528,29 @@ def PlotTest():
         ax.set_ylabel('SA (g)') 
     fig.savefig(pth+'/ComparisonsNGA08_NGA14.png') 
 
+
+def BSSA14_test(Ti): 
+    # simple test comparing with file: ./Validation/NGAmodelsTestFiles/nga_Sa_v19a.xls
+    Rjb = Rrup=20.
+    Vs30 = 760.
+    Mw = 6
+    rake = 0.
+    Ftype='SS'
+    Mech = 1
+    CoefTerms={'terms':(1,1,1),'NewCoefs':None}
+    kwds = {'Mech':Mech,'Ftype':Ftype, 'Z10':None, 'Dregion':'GlobalCATW', 'country':'California', 'CoefTerms':CoefTerms}
+    BSSAnga = BSSA14.BSSA14_nga()    # BA08nga instance
+    # debug mode (show each term)
+    
+    IM, sigmaT, tau, sigma = BSSAnga(Mw,Rjb,Vs30,Ti,rake, **kwds)
+    print Ti, 'BSSA14:', IM, sigmaT, tau, sigma
+    VsFlag = 0
+    Z10=Z25=None
+    dip = 90; Ztor = 3; W = 10; Fhw = 0
+    median, std, tau, sigma = NGA14( 'BSSA', Mw, Rjb, Vs30, Ti, Ftype=Ftype, Mech=Mech, rake=rake, W=W,Ztor=Ztor,dip=dip,Rrup=Rrup,Fhw=Fhw,Z10=Z10,Z25=Z25,VsFlag=VsFlag )
+    print Ti, 'NGA14_BSSA:',median, std, tau, sigma
+    
+   
 # ====================
 # self_application
 # ====================
@@ -541,6 +558,9 @@ if __name__ == '__main__':
 
     import sys 
     opt = sys.argv[1]
+    if opt == 'BA08': 
+        BA08Test(0.3) 
+
     if opt == 'NGA08':
         nga = sys.argv[2]   # choose one NGA model in NGA08 
         NGA08test(nga)
@@ -569,3 +589,8 @@ if __name__ == '__main__':
 
     if opt == 'PlotTest': 
         PlotTest()
+     
+    if opt == 'BSSA':
+        BSSA14_test(0.5)
+        BSSA14_test(0.75)
+        

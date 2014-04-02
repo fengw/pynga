@@ -12,8 +12,8 @@ class CB14_nga():
 	"""
 	Model initialization
 	"""
-        self.filepth = './NGA_west2'    # change this in macbook pro
-        self.CoefFile = self.filepth + '/CB14.csv'
+        self.filepth = os.path.join(os.getcwd(),'NGA_west2') 
+        self.CoefFile = os.path.join(self.filepth, 'CB14.csv')
         self.Coefs = {}
         self.ReadModelCoefs() 
         self.regions = ['CA','JP','CH']    # for distinguished anelastic attenuation for different countries
@@ -23,8 +23,9 @@ class CB14_nga():
 
     
     def ReadModelCoefs(self): 
-        self.CoefKeys = open(self.CoefFile,'r').readlines()[1].strip().split(',')[1:]
-        inputs = np.loadtxt(self.CoefFile,skiprows=2,delimiter=',')
+        print len(open(self.CoefFile,'r').readlines()) 
+	self.CoefKeys = open(self.CoefFile,'r').readlines()[1].strip().split(',')[1:]
+        inputs = np.loadtxt(self.CoefFile,skiprows=2, delimiter=',')
         self.periods = inputs[:,0]
         coefs = inputs[:,1:]
         for i in xrange( len(self.periods) ):
@@ -46,7 +47,7 @@ class CB14_nga():
                 exec(cmd)
 
     
-    def __call__(self,M,Rjb,Vs30,T,rake, Rrup=None, Ftype=None, \
+    def __call__(self,M,Rjb,Vs30,T, rake, Rrup=None, Ftype=None, \
 	    dip=None,Zhypo=None,Ztor=None,Z25=None, \
 	    W=None,Rx=None,azimuth=None,Fhw=0,\
 	    Z10=None,Z15=None, Arb=0, region='CA', SJ = 0, \
@@ -68,6 +69,7 @@ class CB14_nga():
         self.SJ = SJ 
         terms = CoefTerms['terms']
 	NewCoefs = CoefTerms['NewCoefs']
+        self.Fhw = Fhw
 
         # check inputs
 	if T in self.periods:
@@ -102,7 +104,7 @@ class CB14_nga():
 		print 'you should give either the fault width W or the rake angle'
 		raise ValueError
 	    else:
-		W = calc_W(self.M,self.rake)
+		self.W = calc_W(self.M,self.rake)
 	else: 
 	    self.W = W 
 
@@ -148,10 +150,15 @@ class CB14_nga():
 	    self.Rrup = calc_Rrup( Rx_tmp, self.Ztor, W, self.dip, azimuth, Rjb = self.Rjb )
         else:
             self.Rrup = Rrup
-
+        if azimuth == 90.: 
+            Rx = Rrup / np.sin(self.dip*np.pi/180.) - Ztor/np.tan(self.dip*np.pi/180.)
+        elif azimuth > 0.0:
+            Rx = Rjb * np.tan(azimuth*np.pi/180.)
+        elif azimuth <= 0.0: 
+            Rx = 0.0
 	if Rx == None:
 	    if azimuth == None:
-		if Fhw != None:
+		if Fhw != 0:
 		    if Fhw == 1:
 			azimuth = 50   # hanging wall site
 		    else:
@@ -167,11 +174,15 @@ class CB14_nga():
         
         # Determine Site-Specific parameters (those empirical relationships dependes on database)
         if Z25 == None:
-	    self.Z25 = calc_Z25(self.Vs30,Z1model='CY')
-
+            # if Z25 not provided, use the default values
+            if region == 'CA': 
+                self.Z25 = np.exp(7.089-1.144*np.log(Vs30))
+            elif region == 'JP': 
+                self.Z25 = np.exp(5.359-1.102*np.log(Vs30))
+            else: 
+                self.Z25 = np.exp(6.510-1.181*np.log(Vs30))
 	else: 
 	    self.Z25 = Z25  # input Z25 should be in km
-
     
         # update coeficient (use updated coefficients)
 	if NewCoefs != None:
@@ -209,13 +220,15 @@ class CB14_nga():
 	c4 = self.Coefs[Ti]['c4']
 	
 	if self.M <= 4.5:
-	    return c0 + c1*self.M
+	    f_mag =  c0 + c1*self.M
 	elif 4.5 < self.M <= 5.5:
-	    return c0 + c1*self.M + c2*(self.M-4.5)
+	    f_mag = c0 + c1*self.M + c2*(self.M-4.5)
         elif 5.5 < self.M <= 6.5:
-	    return c0 + c1*self.M + c2*(self.M-4.5) + c3*(self.M-5.5)
+	    f_mag = c0 + c1*self.M + c2*(self.M-4.5) + c3*(self.M-5.5)
         else: 
-	    return c0 + c1*self.M + c2*(self.M-4.5) + c3*(self.M-5.5) + c4*(self.M-6.5)
+	    f_mag = c0 + c1*self.M + c2*(self.M-4.5) + c3*(self.M-5.5) + c4*(self.M-6.5)
+        #print 'f_mag:',f_mag 
+        return f_mag 
 
 
     def distance_function(self,Tother=None):
@@ -232,7 +245,9 @@ class CB14_nga():
 	c7 = self.Coefs[Ti]['c7']
 	
 	Rtmp = np.sqrt( self.Rrup**2 + c7**2)
-	return (c5+c6*self.M)*np.log(Rtmp)
+	f_dis = (c5+c6*self.M)*np.log(Rtmp)
+        #print 'f_dis:', f_dis 
+        return f_dis 
 
     def attenuation_function(self, Tother=None): 
 	""" 
@@ -245,10 +260,12 @@ class CB14_nga():
         c20 = self.Coefs[Ti]['c20'] 
         D_c20 = self.Coefs[Ti]['D_c20_%s'%self.region] 
         if self.Rrup > 80: 
-            return (c20 + D_c20)*(self.Rrup-80)
+            f_atn = (c20 + D_c20)*(self.Rrup-80)
         else: 
-            return 0.0 
-        
+            f_atn =  0.0 
+        #print 'f_atn:', f_atn 
+        return f_atn 
+
     
     def fault_function(self,Tother=None):
 	"""
@@ -263,7 +280,9 @@ class CB14_nga():
 	c9 = self.Coefs[Ti]['c9']
 	f_fltF = c8*self.Frv + c9*self.Fnm 
         f_fltM = 0*(self.M<=4.5) + (self.M-4.5)*(4.5<self.M<=5.5) + 1*(self.M>5.5)
-	return f_fltF * f_fltM 
+	f_flt = f_fltF * f_fltM 
+        #print 'f_flt:', f_flt 
+        return f_flt 
 
     def hw_function(self,Tother=None):
 	"""
@@ -283,6 +302,7 @@ class CB14_nga():
         h5 = self.Coefs[Ti]['h5']
         h6 = self.Coefs[Ti]['h6']
         
+        #print 'Rx:', self.Rx
         R1 = self.W * np.cos(self.dip*np.pi/180.)
         R2 = 62*self.M-350
         tmp1 = self.Rx/R1
@@ -299,8 +319,9 @@ class CB14_nga():
                 (1+a2*(self.M-6.5))*(self.M>6.5)
         f_hngZ = (1-0.06*self.Ztor)*(self.Ztor<=16.66) + 0*(self.Ztor>16.66)
 	f_hngD = (90-self.dip)/45. 
-
-	return c10 * f_hngRx * f_hngRrup * f_hngM * f_hngZ * f_hngD
+        f_hng = c10 * f_hngRx * f_hngRrup * f_hngM * f_hngZ * f_hngD * self.Fhw
+        #print 'f_hng: ', f_hng 
+        return f_hng
 
 
     def rup_dip_function(self,Tother=None): 
@@ -310,6 +331,7 @@ class CB14_nga():
 	    Ti = GetKey( self.T )
         c19 = self.Coefs[Ti]['c19'] 
         f_dip = c19*self.dip*(self.M<=4.5) + c19*(5.5-self.M)*self.dip*(4.5<self.M<=5.5) + 0*(self.M>5.5)
+        #print 'f_dip:', f_dip
         return f_dip 
     
     def hypo_depth_function(self,Tother=None): 
@@ -322,7 +344,9 @@ class CB14_nga():
         c18 = self.Coefs[Ti]['c18']
         f_hypoH = 0*(self.Zhypo<=7) + (self.Zhypo-7)*(7<self.Zhypo<=20) + 13*(self.Zhypo>20)
         f_hypoM = c17*(self.M<=5.5) + (c17+(c18-c17)*(self.M-5.5))*(5.5<self.M<=6.5) + c18*(self.M>6.5)
-        return f_hypoH*f_hypoM 
+        f_hyp = f_hypoH*f_hypoM 
+        #print 'f_hyp:',f_hyp
+        return f_hyp
 
 
     def basin_function(self,Tother=None,Z25=None):
@@ -333,20 +357,21 @@ class CB14_nga():
 	    Ti = GetKey( Tother )
 	else:
 	    Ti = GetKey( self.T )
-	if Z25 != None: 
-	    self.Z25 = Z25 
+	if Z25 == None: 
+	    Z25 = self.Z25 
 
 	c14 = self.Coefs[Ti]['c14']
 	c15 = self.Coefs[Ti]['c15']
 	c16 = self.Coefs[Ti]['c16']
 	k3 = self.Coefs[Ti]['k3'] 
-
-	if self.Z25 <= 1:
-	    return (c14+c15*self.SJ) * (self.Z25-1)
-	elif 1 < self.Z25 <= 3:
-	    return 0
+	if Z25 <= 1.0:
+	    f_sed = (c14+c15*self.SJ) * (Z25-1.0)
+	elif 1.0 < Z25 <= 3.0:
+	    f_sed = 0.0
 	else:
-	    return c16*k3*np.exp(-0.75)*(1-np.exp(-0.25*(self.Z25-3)))
+	    f_sed = c16*k3*np.exp(-0.75)*(1-np.exp(-0.25*(Z25-3.0)))
+        #print 'f_sed:', f_sed
+        return f_sed
 
 
     def A1100_calc(self):
@@ -360,6 +385,8 @@ class CB14_nga():
                          self.hypo_depth_function(Tother=Tother)+
 			 self.basin_function(Tother=Tother)+
 	                 self.site_function(A1100=0,Vs30=1100.,Tother=Tother) )
+        #print 'PGA1100:', A1100
+        #print '=================================='
         return A1100
 
 
@@ -398,7 +425,7 @@ class CB14_nga():
             f_siteJ = (c13+k2*self.n)*np.log(Vs30/k1)
         
         f_site = f_siteG + self.SJ*f_siteJ 
-        
+        #print 'f_site:', f_site
         return f_site
 
 
@@ -431,7 +458,10 @@ class CB14_nga():
 	    if IM < IM1: 
 		# This is for SA (not for PGA and PGV, since they are computed above)
 		IM = IM1
+        #print 'IM: ', IM 
+        #print '=============================================='
 	return IM
+
 
     # function used to compute standard deviation terms
     def alpha_calc( self, Vs30=None, Tother=None ):
@@ -464,8 +494,8 @@ class CB14_nga():
         phi2 = self.Coefs[Ti]['phi2']
         tau1 = self.Coefs[Ti]['tau1'] 
         tau2 = self.Coefs[Ti]['tau2'] 
-	phi_lnY = phi1*(self.M<=4.5) + (phi2+(phi1-phi2)*(5.5-self.M))*(4.5<self.M<=5.5) + phi2*(self.M>=5.5)
-	tau_lnY = tau1*(self.M<=4.5) + (tau2+(tau1-tau2)*(5.5-self.M))*(4.5<self.M<=5.5) + tau2*(self.M>=5.5)
+	phi_lnY = phi1*(self.M<=4.5) + (phi2+(phi1-phi2)*(5.5-self.M))*(4.5<self.M<=5.5) + phi2*(self.M>5.5)
+	tau_lnY = tau1*(self.M<=4.5) + (tau2+(tau1-tau2)*(5.5-self.M))*(4.5<self.M<=5.5) + tau2*(self.M>5.5)
         return phi_lnY, tau_lnY
 
 
@@ -527,40 +557,37 @@ def CB14nga_test(T, CoefTerms):
     """
     Test CB nga model
     """
-    M = 4.
-    Ztor = 3.0 
-    Zhypo = None
-    dip = 90
-    Ftype = 'SS'
-    rake = 180    # for specific rupture
-    rake = 0.
-    W = 10.0
+    M = 8.8
+    Zhypo = 35.
+    Ztor= 4.098
+    dip = 18
+    Ftype = 'RV'
+    rake = 107    # for specific rupture
+    W = 200
 
-    Rjb = np.arange(1,200,5)
-    Rrup = Rjb 
-    Rx = Rjb 
-
-    Vs30 = 760. 
-    Z25 = None 
+    Rjb = 0.0
+    Rrup = [5.23399,]
+    azimuth = 90. 
+    Fhw = 0
+    Vs30 = 760
+    Z25 = 1.0
+    
     Arb = 0
 
     # How to use it
     CBnga = CB14_nga()
-    kwds = {'Ftype':Ftype,'Z25':Z25,'Rrup':Rrup,'Zhypo':Zhypo,'W':W,'Ztor':Ztor,'dip':dip,'Arb':Arb,'CoefTerms':CoefTerms}
+    kwds = {'Ftype':Ftype,'Z25':Z25,'Rrup':Rrup,'Zhypo':Zhypo,'W':W,'Fhw':Fhw, 'Ztor':Ztor,'azimuth':azimuth,'dip':dip,'Arb':Arb,'CoefTerms':CoefTerms}
     values = mapfunc( CBnga, M, Rjb, Vs30, T, rake,**kwds )
 
     for i in xrange( len(values) ):
-	print Rrup[i], values[i]
+	print values[i]
 
     return CBnga
 
 if __name__ == '__main__':
-    T = 0.3; NewCoefs = None
-    CoefTerms = {'terms':(1,1,1,1,1,1,1,1,1),'NewCoefs':NewCoefs}
-
-    print 'CB SA at %s'%('%3.2f'%T)
-    CBnga = CB14nga_test(T,CoefTerms)
-    T = -1.0
-    print 'CB PGA'
-    CBnga = CB14nga_test(T,CoefTerms)
+    CoefTerms = {'terms':(1,1,1,1,1,1,1,1,1),'NewCoefs':None}
+    #for T in [0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0, -1,-2]: 
+    for T in [-1, 0.3, 1.0, 3.0]:
+        print 'CB SA at %s'%('%3.2f'%T)
+        CBnga = CB14nga_test(T,CoefTerms)
 

@@ -6,8 +6,9 @@ class ASK14_nga:
     ASK14 NGA model class
     """
     def __init__(self):
-        self.filepth = './NGA_west2'    # change this in macbook pro
-        self.CoefFile = self.filepth + '/ASK14.csv'
+        
+        self.filepth = os.path.join(os.getcwd(), 'NGA_west2')
+        self.CoefFile = os.path.join( self.filepth, 'ASK14.csv' )
         self.Coefs = {}
         self.ReadModelCoefs() 
         self.countries = ['California', 'Japan'] 
@@ -53,7 +54,7 @@ class ASK14_nga:
 		 CoefTerms={'terms':(1,1,1,1,1,1,1),'NewCoefs':None} \
 		 ):
 	
-        # input Z10 should be in km !!! (different from AS08 and CY08, CY14) 
+        # input Z10 should be in meter !!!  
         # CRjb is defined for aftershock, if you set Fas = 0, then this will not be used
 
 	self.M = M    # moment magnitude
@@ -90,7 +91,7 @@ class ASK14_nga:
 		print 'you should give either the fault width W or the rake angle'
 		raise ValueError
 	    else:
-		W = calc_W(self.M,self.rake)
+		self.W = calc_W(self.M,self.rake)
 	else: 
 	    self.W = W 
 	
@@ -142,13 +143,15 @@ class ASK14_nga:
 	    else:
 		azimuth = -50.
 	
-	if self.Rjb == 0:
-	    azimuth = 90.
-	    Fhw = 1
-	
 	self.Fhw = Fhw 
 	
 	# Compute Rrup and Rx
+        if azimuth == 90.: 
+            Rx = Rrup / np.sin(self.dip*np.pi/180.) - Ztor/np.tan(self.dip*np.pi/180.)
+        elif azimuth > 0.0:
+            Rx = Rjb * np.tan(azimuth*np.pi/180.)
+        elif azimuth <= 0.0: 
+            Rx = 0.0
 	if Rx == None:                                                                
 	    self.Rx = calc_Rx( self.Rjb, self.Ztor, self.W, self.dip, azimuth, Rrup )
 	else:
@@ -160,7 +163,7 @@ class ASK14_nga:
         
         if Ry0 == None: 
             if self.azimuth != None and self.Rx != None: 
-                self.Ry0 = self.Rx * np.tan(self.azimuth) 
+                self.Ry0 = self.Rx * np.tan(self.azimuth*np.pi/180.) 
             else: 
                 self.Ry0 = None
         else: 
@@ -168,10 +171,13 @@ class ASK14_nga:
 
 	# Z10
 	if Z10 == None:
-	    self.Z10 = calc_Z1(self.Vs30,'AS')   # in meter
+            if country == 'Japan': 
+                self.Z10 = np.exp(-5.23/2. * np.log((Vs30**2+412.**2)/(1360.**2+412.**2)))
+            else: 
+                self.Z10 = np.exp(-7.67/4. * np.log((Vs30**4+610.**4)/(1360.**4+610.**4))) 
 	else:
 	    self.Z10 = Z10
-
+        self.Z10 = self.Z10/1000.    # for ASK14, the Z10 used in calculation is in km  
 	self.Fas = Fas    # aftershock flag (0 or 1)
         self.CRjb = CRjb 
         self.VsFlag = VsFlag    # 0: estimated Vs30; 1: measured Vs30
@@ -213,7 +219,8 @@ class ASK14_nga:
         elif self.M >= M1: 
             output = a1 + self.a5*(self.M-M1) + a8*(8.5-self.M)**2 + \
                     (a2+a3*(self.M-M1))*np.log(Rtmp) + a17*self.Rrup 
-	return output 
+        #print 'f_base=', output
+        return output 
 
 
     def flt_function(self,Tother=None):
@@ -231,8 +238,9 @@ class ASK14_nga:
         f8  = a12*(self.M>5) + a12*(self.M-4)*(4<self.M<=5) + 0*(self.M<=4)
         f11 = a14*(self.CRjb<=5) + a14*(1-(self.CRjb-5)/10.)*(5<self.CRjb<=15) + 0*(self.CRjb>15)
         
-        output = self.Frv*f7 + self.Fnm*f8 + self.Fas*f11 
-	return output 
+        output = self.Frv*f7 + self.Fnm*f8 + self.Fas*f11
+	#print 'f_flt=', output
+        return output 
 
 
     def ztor_function(self, Tother=None):
@@ -249,6 +257,7 @@ class ASK14_nga:
 	    output = a15*self.Ztor/20.
 	else:
 	    output = a15
+        #print 'f_ztor=', output
 	return output
 
 
@@ -273,7 +282,7 @@ class ASK14_nga:
             # taper2 
             if self.M >= 6.5: 
                 taper2 = 1 + self.a2HW*(self.M-6.5)
-            elif 5.5 < M < 6.5: 
+            elif 5.5 < self.M < 6.5: 
                 taper2 = 1 + self.a2HW*(self.M-6.5) - (1-self.a2HW)*(self.M-6.5)**2
             else: 
                 taper2 = 0.0 
@@ -299,22 +308,22 @@ class ASK14_nga:
 
             # taper5 (constrain azimuthally)
             Ry1 = self.Rx*np.tan(20*np.pi/180.)
-	    # note: Ry0 can be computed by Rx*|tan(Src2SiteAzimuth)|
-	    if self.Ry0 != None: 
+            if self.Ry0 != None: 
                 if self.Ry0 < Ry1: 
                     taper5 = 1.0
                 elif self.Ry0-Ry1 < 5: 
-                    taper4 = 1-(self.Ry0-Ry1)/5.
+                    taper5 = 1-(self.Ry0-Ry1)/5.
                 elif self.Ry0-Ry1 > 5:
                     taper5 = 0.0 
             else: 
                 taper5 = 1.0*(self.Rjb==0) + \
                         (1-self.Rjb/30.)*(self.Rjb<30 and self.Rjb!=0) + \
                         0.0*(self.Rjb>=30.)
-
-	    output = a13*taper1*taper2*taper3*taper4*taper5	   
-	
+            #print 'taper1, taper2, taper3, taper4, taper5, a13:', taper1, taper2, taper3, taper4, taper5, a13
+	    output = a13*taper1*taper2*taper3*taper4*taper5
+        #print 'Rx, f_hng=', self.Rx, output
         return output 
+
 
     def calc_MeanZ10(self,Vs30=None, country='California'): 
         if Vs30 == None: 
@@ -349,11 +358,13 @@ class ASK14_nga:
         a45 = self.Coefs[Ti]['a45'] 
         a46 = self.Coefs[Ti]['a46'] 
 
-        MeanZ10 = self.calc_MeanZ10(country=self.country) 
+        MeanZ10 = self.calc_MeanZ10(Vs30=Vs30, country=self.country)
 
         term = np.log((Z10+0.01)/(MeanZ10+0.01))
+      #  print 'Z10, Z10hat, a43, term', Z10, MeanZ10, a43, term 
         output = a43*(Vs30<=200.) + a44*(200<Vs30<=300) + a45*(300<Vs30<=500) + a46*(Vs30>500)
         output = output * term 
+        #print 'f_soil=',output
 	return output 
 
 
@@ -402,21 +413,22 @@ class ASK14_nga:
 		    b*np.log(SA1100+self.c*(Vs30_1/Vlin)**self.n)
 	else:
 	    output = (a10+b*self.n)*np.log(Vs30_1/Vlin)
-	return output 
+	#print 'f_site=',output
+        return output 
 
 
     def SA1100_calc(self):
 	# compute SA1100 (different from AS08) 
-	# PGA when Vs30 = 1100
 	SA1100Rock = 0.0
 	Vs30Rock = 1100.
-	Z10Rock = calc_Z1( Vs30Rock, 'AS' )    # attention here
-	Tother = self.T    # SA at current period !
-        PGA1100 = self.base_model(Tother=Tother)+self.flt_function(Tother=Tother)+\
+	Z10Rock = calc_Z1( Vs30Rock, 'AS' )/1000.   # attention here
+        Tother = self.T    # SA at current period !
+	#cout << "Z10Rock: " << Z10Rock << ", Z10hat: " << Z10hat << ", a46: " << s_a46[iT] << ", term: " << tmp << endl;
+        SA1100 = self.base_model(Tother=Tother)+self.flt_function(Tother=Tother)+\
 		  self.site_model(SA1100Rock,Vs30=Vs30Rock,Tother=Tother)+\
 		  self.Fhw*self.hw_function(Tother=Tother)+self.ztor_function(Tother=Tother) + \
 		  self.soil_function(Z10=Z10Rock,Vs30=Vs30Rock,Tother=Tother)
-	output = np.exp( PGA1100 ) 
+	output = np.exp( SA1100 ) 
 	return output 
 
 
@@ -436,24 +448,22 @@ class ASK14_nga:
             cmd = "%s = self.Coefs['%s']['%s']"%(key,Ti,key) 
             exec(cmd)
         
-	V1, Vs30_1 = self.CalcVs30Star(Vs30,T)
-        
-	if self.region == 'CA': 
+        if self.region == 'CA': 
             return 0.0 
         elif self.region == 'TW': 
-            f12 = a31*np.log(Vs30_1/Vlin)
-            return f12+a25*Rrup
+            f11 = a31*np.log(Vs30/Vlin)
+            return f11+a25*Rrup
         elif self.region == 'CN': 
             return a28*Rrup
         elif self.region == 'JP': 
-            f13 = a36*(Vs30<200) + \
+            f12 = a36*(Vs30<200) + \
                     a37*(200<=Vs30<300) + \
                     a38*(300<=Vs30<400) + \
                     self.a39*(400<=Vs30<500) + \
                     a40*(500<=Vs30<700) + \
                     a41*(700<=Vs30<1000) + \
                     a42*(Vs30>=1000)
-            return f13 + a29*Rrup 
+            return f12 + a29*Rrup 
 
     # function to compute the intensity
     def logline(self,x1,x2,y1,y2,x):
@@ -465,7 +475,10 @@ class ASK14_nga:
 
     def compute_im( self, terms=(1,1,1,1,1,1,1)):
 
+       # print 'Compute SA1100_calc'
 	SA1100 = self.SA1100_calc()
+        #print 'SA1100=',SA1100
+       # print '===================================='
         LnSa = terms[0] * self.base_model() + \
                terms[1] * self.flt_function() + \
                terms[2] * (self.Fhw*self.hw_function() + \
@@ -474,6 +487,7 @@ class ASK14_nga:
                terms[5] * self.soil_function() + \
                terms[6] * self.RegionalCorrection()
 	IM = np.exp(LnSa)
+       # print 'IM = ',IM
 	return IM
 
     
@@ -485,11 +499,12 @@ class ASK14_nga:
 
 	SA1100 = self.SA1100_calc()
 	if self.Vs30 >= Vlin:
-	    return 0.0
+	    alpha = 0.0
 	else:
-	    return -b*SA1100/(SA1100+self.c)  + \
+	    alpha = -b*SA1100/(SA1100+self.c)  + \
 		    b*SA1100/(SA1100+self.c*(self.Vs30/Vlin)**self.n)    
-     
+       # print 'Alpha=',alpha
+        return alpha
 
     def calc_sigma_tau(self):
 	Ti = GetKey( self.T )
@@ -526,36 +541,29 @@ def ASK14nga_test(T,CoefTerms):
     """
     Test AS nga model
     """
-    if 0:
-	# input list
-	Mw = 7.75
-	Rjb = 9.589290479428028 
-	Vs30 = 354.0,768.,1200.,160. 
-	rake = 180    # for specific rupture
+    Mw = 8.0
+    Zhypo = 8.0
+    Ztor= 0.0
+    dip = 90
+    Ftype = 'SS'
+    rake = 0    # for specific rupture
+    W = 100
 
-	Rrup = 12.18438518124245 
-	Rx = 10.099037378240684
-	Ztor= 0.64274240
-	dip = 79.39554
-	W = 19.65842096
-	Z10 = 0.0, 300., 500., 1000.
+    Rjb = 3.0
+    Rrup = Rjb
+    Rx = Rrup
+    #Rrup = (W*np.sin(dip*np.pi/180.)+Ztor) * np.cos(dip*np.pi/180.) 
+    #Rx = W*np.cos(dip*np.pi/180.) 
 
-	Fas = 0
-	VsFlag = 0
-    else: 
-	Mw = 6.93 
-	Ztor = 3 
-	Ftype = 'RV'; rake = None
-	W = 3.85 
-	dip = 70 
-	Rrup = Rjb = Rx = 30 
-	Fhw = 0 
-	Vs30 = 760 
-	Z10 = 0.024 * 1000   # in meter 
-	Z25 = 2.974    # in km 
-	VsFlag = 0 
-	Fas = 0
+    #print "Rx", Rx
+    #Rx = Rrup
 
+    Vs30 = 748.0,1200.,345.,160.
+    Vs30 = 760.
+    Z25 = Z10 = None
+
+    Fas = 0 
+    VsFlag = 0 
 
     ASKnga = ASK14_nga()
 
@@ -588,8 +596,9 @@ if __name__ == '__main__':
 	AS14nga = ASK14nga_test(T,CoefTerms)
     else: 
 	# Notes: PGV for Vs30 = 760, Z10 = 24, the soil-depth function should be the same as T=1.0
-	T = 3.0
-	print 'AS PGV:'
-	CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
-	ASKnga = ASK14nga_test(T,CoefTerms)
+        #for T in [-1.0,-2.0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]:
+        for T in [-1.0,]:
+            print 'AS SA at %s'%('%3.2f'%T)
+            CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
+            ASKnga = ASK14nga_test(T,CoefTerms)
 

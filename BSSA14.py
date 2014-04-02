@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 
 
 from utils import *
 
@@ -8,8 +8,8 @@ class BSSA14_nga:
     (validated with results from original NGA modelers)
     """
     def __init__(self):
-        self.filepth = './NGA_west2'    # change this in macbook pro
-        self.CoefFile = self.filepth + '/BSSA14.csv'
+        self.filepth = os.path.join(os.getcwd(),'NGA_west2') 
+        self.CoefFile = os.path.join(self.filepth, 'BSSA14.csv')
         self.Coefs = {}
         self.ReadModelCoefs()         
         
@@ -56,10 +56,10 @@ class BSSA14_nga:
 	rake: rake angle (degree), default is None (Unspecified fault type)
 	or give Mech instead of rake
 	Mech: 
-	     0: strike
-	     1: normal
-	     2: reverse
-	     else: unspecified (U=1) (Default)
+	     1: strike
+	     2: normal
+	     3: reverse
+	     else: 0 unspecified (U=1) (Default)
 	Ftype = 'U', or 'SS', or 'RV', or 'NM'
         """
 	# ==================
@@ -69,6 +69,11 @@ class BSSA14_nga:
 	self.Rjb = float(Rjb)	     # Joyner-Boore distance (km)
         self.Vs30 = float( Vs30 )    # 30 meter averaged S wave velocity (m/s)
         self.Z10 = Z10 
+        if Z10 != None: self.Z10 = Z10/1000.         # in km, but the input z10 is in meter
+
+        #print 'T, Rjb, Vs30, Z10:', T, Rjb, Vs30, self.Z10
+
+        #print self.Rjb 
 
         self.region = Dregion
         self.country = country
@@ -186,10 +191,11 @@ class BSSA14_nga:
 
 	faulting = e0*self.U + e1*self.SS + e2*self.NM + e3*self.RV
         if self.M <= Mh:
-	    return faulting + e4*(self.M-Mh) + e5*(self.M-Mh)**2
+	    term = faulting + e4*(self.M-Mh) + e5*(self.M-Mh)**2
 	else:
-	    return faulting + e6*(self.M-Mh)
-
+	    term = faulting + e6*(self.M-Mh)
+        #print 'f_e: ', term 
+        return term 
 
     def distance_function(self,Tother=None):
 	"""
@@ -209,15 +215,18 @@ class BSSA14_nga:
 
 	R = np.sqrt( self.Rjb**2 + h**2 )
         term = (c1+c2*(self.M-self.Mref))*np.log(R/self.Rref)+c3*(R-self.Rref) + D_c3*(R-self.Rref)
+       # print 'Rtmp: ', R, ', Dc3: ', D_c3
+        #print 'f_PB: ', term 
         return term
 
 
     def Vs30toZ1pt0(self, Vs30):
+        # output is in km which will be used in the model (make sure your input is in meter)
         if self.country == 'California': 
             return (-7.15/4.)*np.log((Vs30**4+570.94**4)/(1360**4+570.94**4))
         if self.country == 'Japan': 
             return (-5.23/2.)*np.log((Vs30**2+412.39**2)/(1360**2+412.39**2))
-
+       
     def soil_function(self, Vs30=None, Tother=None):
 	"""
 	Site Amplification Function
@@ -225,10 +234,12 @@ class BSSA14_nga:
 	if Vs30 != None: 
 	    self.Vs30 = Vs30 
 	if Tother != None: 
-	    Ti = GetKey( Tother ) 
+	    Ti = GetKey( Tother )
+            T = Tother
 	else: 
 	    Ti = GetKey(self.T )
-
+            T = self.T 
+            
 	# ===============
 	# linear term
         # ===============
@@ -245,7 +256,8 @@ class BSSA14_nga:
         # 1. compute pga4nl, which is defined as the media PGA when Vs30=Vref=760 m/s
 	Tpga = -1.0    # compute PGA
 	pga4nl = np.exp( self.moment_function(Tother=Tpga) + self.distance_function(Tother=Tpga) )
-	
+        #print 'PGAr: ', pga4nl 
+
         # 2. compute nonlinear site effect
         f4 = self.Coefs[Ti]['f4']
 	f5 = self.Coefs[Ti]['f5']
@@ -261,16 +273,18 @@ class BSSA14_nga:
         else: 
             f6 = self.Coefs[Ti]['f6']
             f7 = self.Coefs[Ti]['f7']
-            Z1pt0_Vs30 = self.Vs30toZ1pt0(self.Vs30)  
-            dZ1pt0 = abs(Z1pt0_Vs30 - self.Z10)
-            if Ti <0.65: 
+            Z1pt0_Vs30 = np.exp(self.Vs30toZ1pt0(self.Vs30))/1000.
+            dZ1pt0 = self.Z10-Z1pt0_Vs30
+          #  print 'dz10: ', dZ1pt0
+            if T < 0.65: 
                 fdZ1 = 0.0 
-            elif Ti>=0.65: 
+            else:
+                #print 'f6, f7:', f6, f7
                 if dZ1pt0 <= f7/f6:
                     fdZ1 = f6*dZ1pt0 
                 else: 
                     fdZ1 = f7 
-
+        #print "self.Fsite, fdZ1: ", self.Fsite, fdZ1
 	return self.Fsite + fdZ1 
 
 
@@ -283,6 +297,8 @@ class BSSA14_nga:
 		     terms[2]*self.soil_function())
         # note: for PGA and PSA, IM has unit (g) here 
         #       for PGV, IM has unit (cm/s) !  (after np.exp)
+        #print 'IM: ', IM 
+        #print '====================================='
 	return IM
 
 
@@ -332,38 +348,44 @@ def BSSA14nga_test(T,CoefTerms):
     Test of some specific inputs (debug)
     """
     # input parameter list
-    Rjb = 0
-    Rjb = np.arange(1,200,5)
-    Vs30 = 748.0,1200.,345.,160.
+    Rjb = [3.25554,]
+    Rjb = [0.0,]
     Vs30 = 760.
-    Mw = 4.
-
-    rake=180.
-    rake = 0.
-    Ftype='SS'
-    Mech = 1
-    kwds = {'Mech':Mech,'Ftype':Ftype, 'Z10':None, 'Dregion':'GlobalCATW', 'country':'California', 'CoefTerms':CoefTerms}
+    Mw = 8.8
+    Z10 = 0.2     # km
+    Ftype='RV'
+    Mech = 3
+    rake = 107
+    kwds = {'Mech':Mech,'Ftype':Ftype, 'Z10':Z10, 'Dregion':'GlobalCATW', 'country':'California', 'CoefTerms':CoefTerms}
     BSSAnga = BSSA14_nga()    # BA08nga instance
     if 1:
         values = mapfunc( BSSAnga, Mw, Rjb, Vs30, T, rake, **kwds )
         for ivalue in xrange( len(values) ):
             print Rjb[ivalue], values[ivalue]
+        print '=========================================='
     else: 
+        Rjb = 3.3  
         # debug mode (show each term)
         IM, sigmaT, tau, sigma = BSSAnga(Mw,Rjb,Vs30,T,rake, **kwds)
         print IM, sigmaT, tau, sigma
-    
+        print '=========================================='
     return BSSAnga 
 
 if __name__ == '__main__':
     import sys 
-    T = 0.3; NewCoefs = None     # pure one
-    print 'BA SA at %s second'%('%3.2f'%T)
-    CoefTerms={'terms':(1,1,1),'NewCoefs':NewCoefs}
-    BSSAnga = BSSA14nga_test(T,CoefTerms)
+    #T = 0.3; NewCoefs = None     # pure one
+    #print 'BA SA at %s second'%('%3.2f'%T)
+    #CoefTerms={'terms':(1,1,1),'NewCoefs':NewCoefs}
+    #BSSAnga = BSSA14nga_test(T,CoefTerms)
 
-    T = -1.0
     CoefTerms={'terms':(1,1,1),'NewCoefs':None}
-    print 'BA PGA at %s second'%('%3.2f'%T)
-    BSSAnga = BSSA14nga_test(T,CoefTerms)
-
+    if 1:
+        #for T in [-2, -1, 0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]:    
+        for T in [-1, 0.3, 1.0, 3.0]:
+            print 'BA PGA at %s second'%('%3.2f'%T)
+            BSSAnga = BSSA14nga_test(T,CoefTerms)
+    else: 
+        T = 1.0
+        print 'BA PGA at %s second'%('%3.2f'%T)
+        BSSAnga = BSSA14nga_test(T,CoefTerms)
+        
