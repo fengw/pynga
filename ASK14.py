@@ -364,7 +364,7 @@ class ASK14_nga:
       #  print 'Z10, Z10hat, a43, term', Z10, MeanZ10, a43, term 
         output = a43*(Vs30<=200.) + a44*(200<Vs30<=300) + a45*(300<Vs30<=500) + a46*(Vs30>500)
         output = output * term 
-        #print 'f_soil=',output
+        print 'f_soil=',output
 	return output 
 
 
@@ -541,26 +541,30 @@ def ASK14nga_test(T,CoefTerms):
     """
     Test AS nga model
     """
-    Mw = 8.0
-    Zhypo = 8.0
-    Ztor= 0.0
-    dip = 90
-    Ftype = 'SS'
+    Mw = 7.0
+    Zhypo = 20.
+    Ztor= 3.0
+    dip = 30
+    Ftype = 'RV'
     rake = 0    # for specific rupture
-    W = 100
+    W = 50
 
     Rjb = 3.0
     Rrup = Rjb
     Rx = Rrup
     #Rrup = (W*np.sin(dip*np.pi/180.)+Ztor) * np.cos(dip*np.pi/180.) 
     #Rx = W*np.cos(dip*np.pi/180.) 
+    Rjb = 0.0
+    Rrup = (W*np.sin(dip*np.pi/180.)+Ztor) * np.cos(dip*np.pi/180.) 
+    Rx = W*np.cos(dip*np.pi/180.) 
 
     #print "Rx", Rx
     #Rx = Rrup
 
     Vs30 = 748.0,1200.,345.,160.
     Vs30 = 760.
-    Z25 = Z10 = None
+    Z25 = 4.0
+    Z10 = 1000.0 
 
     Fas = 0 
     VsFlag = 0 
@@ -597,7 +601,7 @@ if __name__ == '__main__':
     else: 
 	# Notes: PGV for Vs30 = 760, Z10 = 24, the soil-depth function should be the same as T=1.0
         #for T in [-1.0,-2.0, 0.01, 0.02, 0.03, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]:
-        for T in [-1.0,]:
+        for T in [1.0,3.0]:
             print 'AS SA at %s'%('%3.2f'%T)
             CoefTerms = {'terms':(1,1,1,1,1,1,1), 'NewCoefs':None}
             ASKnga = ASK14nga_test(T,CoefTerms)

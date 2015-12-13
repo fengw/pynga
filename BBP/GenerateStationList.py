@@ -111,7 +111,7 @@ loc0 = [lon0, lat0, 0.0]
 
 vD = 0.0
 dhD = grid_size   # in km (grid size) 
-hDx = 60.   # 20~60 km
+hDx = station_radius*1.5   
 hDy = 0.5*L+R0+dhD*2    # along strike
 
 az = strike + np.pi 
@@ -270,3 +270,4 @@ if plot_prefix is not None:
     fig.savefig('%s_station_selection_grid_size_%s_Nsta_%s_RrupAt_%s.pdf' %
                 (plot_prefix, '%.2f' % grid_size,
                  num_stations, Rrup0), format='pdf')
+    plt.show() 

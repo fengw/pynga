@@ -323,10 +323,11 @@ class CY14_nga:
 	D_Z10 = self.Z10 - MeanZ10 
 
         phi5 = self.Coefs[Ti]['phi5']
-	phi6 = self.Coefs[Ti]['phi6']
+	phi6 = self.Coefs[Ti]['phi6']   # phi6 has meter unit
+        D_Z10 = D_Z10*1000. 
 
 	term10  = phi5 * (1-np.exp(-D_Z10/phi6))
-       # print 'f_basin = ', term10
+        print 'f_basin = ', term10
 	return term10
 
 
@@ -407,7 +408,7 @@ def CY14nga_test(T,CoefTerms):
     #Rx = Rrup
 
     Vs30 = 748.0,1200.,345.,160.
-    Vs30 = 180.
+    Vs30 = 760.
     Z25 = 4.0
     Z10 = 1.0 
     
@@ -428,8 +429,9 @@ if __name__ == '__main__':
 
     NewCoefs=None
     CoefTerms = {'terms':(1,1,1,1,1,1,1),'NewCoefs':NewCoefs}
-    
-    for T in [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.12, 0.15, 0.17, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]:
+    Ts = [0.01, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1, 0.12, 0.15, 0.17, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.5, 10.0]  
+    Ts = [1.0, 3.0]
+    for T in Ts:
     #for T in [0.3, ]:
         print 'CY GM at %s'%('%3.2f'%T)
         CYnga = CY14nga_test(T,CoefTerms)
