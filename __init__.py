@@ -302,8 +302,14 @@ def NGA14(model_name, Mw, Rjb, Vs30, period, epislon=0, NGAs=None, \
 	NGAs={'CB':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1,1,1)},\
 	      'BSSA':{'NewCoefs':None,'terms':(1,1,1)},\
 	      'CY':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)},\
-	      'ASK':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)}}\
+	      'ASK':{'NewCoefs':None,'terms':(1,1,1,1,1,1,1)}}
+    else:
 
+	if 'BSSA' not in NGAs.keys(): 
+	    NGAs['BSSA'] = NGAs['BA'] 
+	if 'ASK' not in NGAs.keys(): 
+	    NGAs['ASK'] = NGAs['AS'] 
+	    
     dict1 = NGAs
     itmp = 0
     

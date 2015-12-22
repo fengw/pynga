@@ -12,7 +12,7 @@ class CB14_nga():
 	"""
 	Model initialization
 	"""
-        self.filepth = os.path.join(os.getcwd(),'NGA_west2') 
+        self.filepth = os.path.join(os.path.dirname(__file__),'NGA_west2') 
         self.CoefFile = os.path.join(self.filepth, 'CB14.csv')
         self.Coefs = {}
         self.ReadModelCoefs() 
@@ -23,7 +23,7 @@ class CB14_nga():
 
     
     def ReadModelCoefs(self): 
-        print len(open(self.CoefFile,'r').readlines()) 
+        #print len(open(self.CoefFile,'r').readlines()) 
 	self.CoefKeys = open(self.CoefFile,'r').readlines()[1].strip().split(',')[1:]
         inputs = np.loadtxt(self.CoefFile,skiprows=2, delimiter=',')
         self.periods = inputs[:,0]

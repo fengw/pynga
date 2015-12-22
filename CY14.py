@@ -8,7 +8,7 @@ class CY14_nga:
     """
     def __init__(self):
         
-        self.filepth = os.path.join(os.getcwd(),'NGA_west2') 
+        self.filepth = os.path.join(os.path.dirname(__file__),'NGA_west2') 
         self.CoefFile = os.path.join(self.filepth, 'CY14.csv')
         self.Coefs = {}
         self.ReadModelCoefs() 
@@ -327,7 +327,7 @@ class CY14_nga:
         D_Z10 = D_Z10*1000. 
 
 	term10  = phi5 * (1-np.exp(-D_Z10/phi6))
-        print 'f_basin = ', term10
+        #print 'f_basin = ', term10
 	return term10
 
 

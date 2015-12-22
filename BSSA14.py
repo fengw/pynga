@@ -8,7 +8,7 @@ class BSSA14_nga:
     (validated with results from original NGA modelers)
     """
     def __init__(self):
-        self.filepth = os.path.join(os.getcwd(),'NGA_west2') 
+        self.filepth = os.path.join(os.path.dirname(__file__),'NGA_west2') 
         self.CoefFile = os.path.join(self.filepth, 'BSSA14.csv')
         self.Coefs = {}
         self.ReadModelCoefs()         
@@ -153,10 +153,10 @@ class BSSA14_nga:
     # ============================
     def ftype(self):
 	FT = rake2ftype_BA( self.rake )   # change in this version
-	if FT not in self.fault:
+	if FT not in self.faults:
 	    print 'Invalid fault type!'
 	    print 'It should be in one of the following list:'
-	    print self.fault
+	    print self.faults
 	    raise ValueError
 	else:
 	    if FT == 'unspecified' or FT == 'U':

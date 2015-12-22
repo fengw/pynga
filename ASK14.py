@@ -7,7 +7,7 @@ class ASK14_nga:
     """
     def __init__(self):
         
-        self.filepth = os.path.join(os.getcwd(), 'NGA_west2')
+        self.filepth = os.path.join(os.path.dirname(__file__), 'NGA_west2')
         self.CoefFile = os.path.join( self.filepth, 'ASK14.csv' )
         self.Coefs = {}
         self.ReadModelCoefs() 
@@ -364,7 +364,7 @@ class ASK14_nga:
       #  print 'Z10, Z10hat, a43, term', Z10, MeanZ10, a43, term 
         output = a43*(Vs30<=200.) + a44*(200<Vs30<=300) + a45*(300<Vs30<=500) + a46*(Vs30>500)
         output = output * term 
-        print 'f_soil=',output
+        #print 'f_soil=',output
 	return output 
 
 
